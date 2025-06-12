@@ -1,0 +1,65 @@
+📦 src/
+│
+├── 📁 pages/
+│   ├── Home.jsx
+│   ├── Login.jsx
+│   ├── Signup.jsx
+│   ├── Casino.jsx
+│   ├── Sports.jsx
+│   ├── Profile.jsx
+│   ├── Wallet.jsx
+│   ├── Transactions.jsx
+│   └── NotFound.jsx
+│
+├── 📁 components/
+│   ├── Navbar.jsx
+│   ├── Footer.jsx
+│   ├── GameCard.jsx
+│   ├── BetSlip.jsx
+│   ├── ProtectedRoute.jsx
+│   ├── AuthTabs.jsx
+│   ├── PasswordInput.jsx
+│   └── Loader.jsx
+│
+├── 📁 context/
+│   └── AuthContext.jsx
+│
+├── App.jsx
+├── main.jsx
+└── index.css
+
+
+
+
+
+Backend ---- 
+
+📦 backend/
+│
+├── 📁 controllers/
+│   ├── authController.js
+│   ├── userController.js
+│   ├── walletController.js
+│   ├── betController.js
+│   └── adminController.js
+│
+├── 📁 routes/
+│   ├── authRoutes.js
+│   ├── userRoutes.js
+│   ├── walletRoutes.js
+│   ├── betRoutes.js
+│   └── adminRoutes.js
+│
+├── 📁 models/
+│   ├── User.js
+│   ├── Wallet.js
+│   ├── Bet.js
+│   └── Transaction.js
+│
+├── 📁 middleware/
+│   ├── authMiddleware.js
+│   ├── errorMiddleware.js
+│
+├── config/db.js
+├── server.js
+└── .env
