@@ -1,11 +1,44 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { FcGoogle } from "react-icons/fc";
 import { AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai";
+import axios from "axios";
+import toast from "react-hot-toast";
 
 const Login = () => {
   const [activeTab, setActiveTab] = useState("phone");
   const [showPassword, setShowPassword] = useState(false);
+  const [form, setForm] = useState({ phone: "", email: "", password: "" });
+  const navigate = useNavigate();
+
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleLogin = async () => {
+    try {
+      const payload =
+        activeTab === "phone"
+          ? { phone: form.phone, password: form.password }
+          : { email: form.email, password: form.password };
+
+      const response = await axios.post("http://localhost:5000/login", payload);
+
+      toast.success("Login successful!");
+       if (res.data.token) {
+    localStorage.setItem("token", res.data.token); 
+  }
+      
+      navigate("/"); 
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Login failed!");
+    }
+  };
+
+  const isValid =
+    form.password.length >= 4 &&
+    ((activeTab === "phone" && form.phone.length >= 10) ||
+      (activeTab === "email" && form.email.includes("@")));
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -24,7 +57,7 @@ const Login = () => {
         </div>
 
         <div className="flex mb-4 border border-gray-300 rounded-lg overflow-hidden">
-          {["phone", "account", "email"].map((tab) => (
+          {["phone", "email"].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -32,26 +65,41 @@ const Login = () => {
                 activeTab === tab ? "bg-gray-100 font-semibold" : "bg-white"
               }`}
             >
-              {tab === "phone" && "Phone number"}
-              {tab === "account" && "Account number"}
-              {tab === "email" && "E-mail"}
+              {tab === "phone" ? "Phone number" : "E-mail"}
             </button>
           ))}
         </div>
 
         <div className="space-y-3">
-          <div className="relative">
-            <span className="absolute left-3 top-3 text-xl">🇮🇳</span>
+          {activeTab === "phone" ? (
+            <div className="relative">
+              <span className="absolute left-3 top-3 text-xl">🇮🇳</span>
+              <input
+                type="tel"
+                name="phone"
+                value={form.phone}
+                onChange={handleChange}
+                placeholder="+91 (XXXXX) XXX - XXX"
+                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400"
+              />
+            </div>
+          ) : (
             <input
-              type="tel"
-              placeholder="+91 (XXXXX) XXX - XXX"
-              className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400"
+              type="email"
+              name="email"
+              value={form.email}
+              onChange={handleChange}
+              placeholder="Enter your email"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400"
             />
-          </div>
+          )}
 
           <div className="relative">
             <input
+              name="password"
               type={showPassword ? "text" : "password"}
+              value={form.password}
+              onChange={handleChange}
               placeholder="Password"
               className="w-full pr-10 py-2 px-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400"
             />
@@ -70,7 +118,15 @@ const Login = () => {
           </Link>
         </div>
 
-        <button className="w-full bg-gray-200 text-gray-500 py-2 rounded-lg cursor-not-allowed">
+        <button
+          onClick={handleLogin}
+          disabled={!isValid}
+          className={`w-full py-2 rounded-lg font-medium transition ${
+            isValid
+              ? "bg-green-500 text-white hover:bg-green-600"
+              : "bg-gray-200 text-gray-500 cursor-not-allowed"
+          }`}
+        >
           Log in
         </button>
 

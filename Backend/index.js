@@ -143,70 +143,144 @@ app.post("/wallet/update", async (req, res) => {
 // 🎮 Quiz Routes
 // ===============================
 
-app.get("/quiz/random", async (req, res) => {
+app.post("/quiz/join", authenticateToken, async (req, res) => {
   try {
-    const quiz = await Quiz.findOne({ open: true });
+    const { fullName } = req.body;
+    const userId = req.user.id;
 
-    if (!quiz || quiz.questions.length === 0) {
+    // ✅ Find an open quiz or create a new one
+    let quiz = await Quiz.findOne({ open: true });
+
+    if (!quiz) {
+      // Fetch all quiz documents
+      const allQuizzes = await Quiz.find();
+      const allQuestions = allQuizzes.flatMap(q => q.questions);
+
+      if (allQuestions.length < 10) {
+        return res.status(400).json({ message: "Not enough questions to create quiz" });
+      }
+
+      // Shuffle & pick 10 questions
+      const shuffled = allQuestions.sort(() => 0.5 - Math.random());
+      const selected = shuffled.slice(0, 10);
+
+      // Create new quiz
+      quiz = await Quiz.create({
+        title: "Random Quiz",
+        entryFee: 5,
+        rewardPerQuestion: 1,
+        questions: selected,
+        players: []
+      });
+    }
+
+    // ❌ Quiz closed check (in case it became closed after finding)
+    if (!quiz.open) {
+      return res.status(400).json({ message: "Quiz is already closed" });
+    }
+
+    const wallet = await Wallet.findOne({ userId });
+    if (!wallet || wallet.balance < quiz.entryFee) {
+      return res.status(400).json({ message: "Insufficient balance" });
+    }
+
+    // Check if user already joined
+    const alreadyJoined = quiz.players.some(p => p.userId.toString() === userId);
+    if (alreadyJoined) {
+      return res.status(200).json({ message: "Already joined", quizId: quiz._id });
+    }
+
+    // Deduct entry fee
+    wallet.balance -= quiz.entryFee;
+    wallet.transactions.push({
+      type: "debit",
+      amount: quiz.entryFee,
+      description: `Joined quiz: ${quiz.title}`
+    });
+    await wallet.save();
+
+    // Add player
+    quiz.players.push({ userId, fullName });
+    await quiz.save();
+
+    res.status(200).json({
+      message: "Quiz joined",
+      quizId: quiz._id,
+      balance: wallet.balance
+    });
+
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
+app.get("/quiz/random",authenticateToken, async (req, res) => {
+  try {
+    const quiz = await Quiz.findOne({ open: true }).lean();
+    if (!quiz || !quiz.questions || quiz.questions.length === 0) {
       return res.status(404).json({ message: "No quiz or questions found" });
     }
 
-    // 👇 Choose a random number between 5 and total available or max 10
-    const max = Math.min(quiz.questions.length, 10);
-    const min = 5;
-    const count = Math.floor(Math.random() * (max - min + 1)) + min;
-
+    const count = Math.min(10, quiz.questions.length); // return up to 10
     const shuffled = quiz.questions.sort(() => 0.5 - Math.random());
-    const selected = shuffled.slice(0, count);
+    
+    const selected = shuffled.slice(0, count).map(q => ({
+      question: q.question,
+      options: q.options,
+      correctAnswer: q.correctAnswer   // include correct answer
+    }));
 
-    res.status(200).json({ totalAvailable: quiz.questions.length, count, questions: selected });
+    res.status(200).json({ questions: selected, quizId: quiz._id });
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 });
 
 
+  app.post("/quiz/submit-answer",authenticateToken,  async (req, res) => {
+    try {
+      const { quizId, questionText, selectedOption } = req.body;
+      const userId = req.user.id;
 
+      const quiz = await Quiz.findById(quizId);
+      if (!quiz) return res.status(404).json({ message: "Quiz not found" });
 
-app.post("/join", authenticateToken, async (req, res) => {
-  try {
-    const { contestId, fullname } = req.body;
-    const userId = req.user.id;
-    const contest = await Quiz.findById(contestId);
+      const question = quiz.questions.find(q => q.question === questionText);
+      if (!question) return res.status(404).json({ message: "Question not found" });
 
-    if (!contest) return res.status(404).json({ message: "Contest not found" });
-    const wallet = await Wallet.findOne({ userId });
-    if (!wallet || wallet.balance < contest.entryFee) return res.status(400).json({ message: "Insufficient balance" });
+      const player = quiz.players.find(p => p.userId.toString() === userId);
+      if (!player) return res.status(403).json({ message: "User not joined in this quiz" });
 
-    wallet.balance -= contest.entryFee;
-    wallet.transactions.push({ type: "debit", amount: contest.entryFee, description: "Join Contest" });
-    await wallet.save();
-
-    if (!contest.players.some(p => p.userId.toString() === userId)) {
-      contest.players.push({ userId, fullName: fullname });
-      await contest.save();
+      if (selectedOption === question.correctAnswer) {
+        player.score += quiz.rewardPerQuestion;
+        await quiz.save();
+        return res.status(200).json({ correct: true, newScore: player.score });
+      } else {
+        return res.status(200).json({ correct: false, newScore: player.score });
+      }
+    } catch (err) {
+      res.status(500).json({ message: "Server error", error: err.message });
     }
+  });
 
-    res.status(200).json({ message: "Joined contest", balance: wallet.balance });
-  } catch (err) {
-    res.status(500).json({ message: "Server error" });
-  }
-});
+// ===============================
+// 💸 LeaderBoard Routes
+// ===============================
 
-app.post("/reward", authenticateToken, async (req, res) => {
+app.get("/quiz/leaderboard/:quizId", async (req, res) => {
   try {
-    const { reward } = req.body;
-    const wallet = await Wallet.findOne({ userId: req.user.id });
+    const { quizId } = req.params;
+    const quiz = await Quiz.findById(quizId).lean();
+    if (!quiz) return res.status(404).json({ message: "Quiz not found" });
 
-    wallet.balance += reward;
-    wallet.transactions.push({ type: "credit", amount: reward, description: "Quiz Reward" });
-    await wallet.save();
-
-    res.status(200).json({ message: "Reward added", balance: wallet.balance });
+    const sortedPlayers = quiz.players.sort((a, b) => b.score - a.score);
+    res.status(200).json({ leaderboard: sortedPlayers });
   } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "Server error", error: err.message });
   }
 });
+
+
 
 // ===============================
 // 💸 Withdraw Routes
