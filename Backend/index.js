@@ -6,6 +6,9 @@ const dotenv = require("dotenv");
 const morgan = require("morgan");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const http = require("http");
+const { initializeSocket } = require("./socket");
+
 
 //✅ Models
 const User = require("./Models/User_Model");
@@ -20,9 +23,16 @@ require("./config/db");
 //✅ Initialize
 dotenv.config();
 const app = express();
+const server = http.createServer(app);
 app.use(cors());
 app.use(express.json());
 app.use(morgan("dev"));
+
+
+
+// Initialize socket
+initializeSocket(server);
+
 
 //✅ Test Route
 app.get("/", (req, res) => res.send("API is running..."));

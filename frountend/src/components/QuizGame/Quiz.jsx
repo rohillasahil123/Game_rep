@@ -14,13 +14,20 @@ const Quiz = () => {
   const [showAnswer, setShowAnswer] = useState(false);
   const [lastCorrectAnswer, setLastCorrectAnswer] = useState(null);
   const [transitioning, setTransitioning] = useState(false);
+  const [timer, setTimer] = useState(5);
+  const [skippedCount, setSkippedCount] = useState(0);
 
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchQuestions = async () => {
       try {
-        const res = await axios.get("http://localhost:5000/quiz/random");
+        const token = localStorage.getItem("token");
+        const res = await axios.get("http://localhost:5000/quiz/random", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
         setQuestions(res.data.questions);
         setQuizId(res.data.quizId);
       } catch (err) {
@@ -32,48 +39,72 @@ const Quiz = () => {
     fetchQuestions();
   }, []);
 
-  const handleNext = async () => {
-    if (transitioning) return;
-    if (!selected) {
-      setError("Please select an option!");
-      return;
+  useEffect(() => {
+    if (showAnswer || leaderboard) return;
+    if (timer === 0) {
+      handleNext(true); // auto-submit
     }
+    const interval = setInterval(() => {
+      setTimer((prev) => prev - 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [timer, showAnswer]);
 
-    setError("");
+  const handleNext = async (auto = false) => {
+    if (transitioning) return;
+
+    const answer = auto ? null : selected;
+
     setShowAnswer(true);
     setTransitioning(true);
+    setError("");
 
     try {
-      const token = localStorage.getItem("token"); // ✅ get token from localStorage
+      const token = localStorage.getItem("token");
 
       const res = await axios.post(
         "http://localhost:5000/quiz/submit-answer",
         {
           quizId,
           questionText: questions[current].question,
-          selectedOption: selected,
+          selectedOption: answer,
         },
         {
           headers: {
-            Authorization: `Bearer ${token}`, // ✅ Send token in Authorization header
+            Authorization: `Bearer ${token}`,
           },
         }
       );
 
       setLastCorrectAnswer(res.data.correctAnswer);
-      if (res.data.correct) setScore((prev) => prev + 10);
+
+      if (res.data.correct) {
+        setScore((prev) => prev + 10);
+        setSkippedCount(0);
+      } else if (!answer) {
+        setSkippedCount((prev) => prev + 1);
+      } else {
+        setSkippedCount(0);
+      }
 
       setTimeout(() => {
+        if (skippedCount >= 2 && !answer) {
+          alert("❌ लगातार 3 सवाल छोड़े गए। आप गेम से बाहर हो गए हैं।");
+          navigate("/");
+          return;
+        }
+
         if (current < questions.length - 1) {
           setCurrent((prev) => prev + 1);
           setSelected(null);
           setShowAnswer(false);
           setLastCorrectAnswer(null);
           setTransitioning(false);
+          setTimer(5);
         } else {
           fetchLeaderboard();
         }
-      }, 2000);
+      }, 1500);
     } catch (err) {
       console.error("Submit answer error:", err);
       setTransitioning(false);
@@ -128,8 +159,8 @@ const Quiz = () => {
 
   return (
     <div className="max-w-2xl mx-auto mt-10 bg-white p-6 rounded-xl shadow">
-      <h1 className="text-xl font-bold mb-4 text-blue-700">
-        Question {current + 1} of {questions.length}
+      <h1 className="text-xl font-bold mb-4 text-blue-700 flex justify-between">
+        <span>Question {current + 1} of {questions.length}</span> <span>&nbsp; ⏱ {timer}s </span>
       </h1>
       <h2 className="text-lg font-semibold mb-4">{questions[current]?.question}</h2>
 
@@ -159,7 +190,8 @@ const Quiz = () => {
       <div className="flex justify-end">
         <button
           className="bg-blue-600 text-white px-6 py-2 rounded-xl hover:bg-blue-700"
-          onClick={handleNext}
+          onClick={() => handleNext(false)}
+          disabled={showAnswer}
         >
           {current < questions.length - 1 ? "Next" : "Finish"}
         </button>
