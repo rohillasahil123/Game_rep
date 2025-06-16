@@ -23,13 +23,16 @@ const Login = () => {
           : { email: form.email, password: form.password };
 
       const response = await axios.post("http://localhost:5000/login", payload);
-
-      toast.success("Login successful!");
-       if (res.data.token) {
-    localStorage.setItem("token", res.data.token); 
+           if (response.status === 200) {
+    localStorage.setItem("token", response.data.token); 
+         navigate("/"); 
+         cl
+           toast.success("Login successful!");
+  }else{
+    console.log("error")
   }
       
-      navigate("/"); 
+     
     } catch (error) {
       toast.error(error.response?.data?.message || "Login failed!");
     }

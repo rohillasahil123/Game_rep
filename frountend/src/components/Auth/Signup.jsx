@@ -39,7 +39,7 @@ const Signup = () => {
         email,
         password,
       });
-      localStorage.setItem("fullName")
+      localStorage.setItem("fullName" , fullName)
       toast.success("Signup successful!");
       navigate('/login')
     } catch (error) {

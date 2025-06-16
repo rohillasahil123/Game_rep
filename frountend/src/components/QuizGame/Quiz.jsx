@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { initializeSocket, joinQuizRoom, finishGame, onGameResult } from "../../socket"
 
 const Quiz = () => {
   const [questions, setQuestions] = useState([]);
@@ -40,9 +41,37 @@ const Quiz = () => {
   }, []);
 
   useEffect(() => {
+    const fullName = localStorage.getItem("fullName");
+    const token = localStorage.getItem("token");
+
+    if (!token || !fullName) return;
+
+    const socket = initializeSocket(token);
+
+    if (quizId) {
+      joinQuizRoom(quizId, fullName);
+    }
+
+    onGameResult((result) => {
+      setLeaderboard([
+        {
+          name: result.winner.fullname,
+          score: result.winner.score,
+          status: "Winner",
+        },
+        {
+          name: result.loser.fullname,
+          score: result.loser.score,
+          status: "Loser",
+        },
+      ]);
+    });
+  }, [quizId]);
+
+  useEffect(() => {
     if (showAnswer || leaderboard) return;
     if (timer === 0) {
-      handleNext(true); // auto-submit
+      handleNext(true);
     }
     const interval = setInterval(() => {
       setTimer((prev) => prev - 1);
@@ -102,7 +131,8 @@ const Quiz = () => {
           setTransitioning(false);
           setTimer(5);
         } else {
-          fetchLeaderboard();
+          const fullName = localStorage.getItem("fullName");
+          finishGame(quizId, score); // Notify backend of final score
         }
       }, 1500);
     } catch (err) {
@@ -111,40 +141,32 @@ const Quiz = () => {
     }
   };
 
-  const fetchLeaderboard = async () => {
-    try {
-      const res = await axios.get(`http://localhost:5000/quiz/leaderboard/${quizId}`);
-      setLeaderboard(res.data.leaderboard);
-    } catch (err) {
-      console.error("Leaderboard fetch error:", err);
-    }
-  };
-
   if (loading) return <div className="text-center py-20">Loading Quiz...</div>;
 
   if (leaderboard) {
     return (
       <div className="max-w-xl mx-auto mt-10 bg-white p-6 rounded-xl shadow">
-        <h2 className="text-2xl font-bold mb-4 text-green-600 text-center">🏆 Final Leaderboard</h2>
+        <h2 className="text-2xl font-bold mb-4 text-green-600 text-center">🏆 Final Result</h2>
         <table className="w-full text-left border">
           <thead>
             <tr className="bg-gray-100 text-gray-700">
-              <th className="p-2">Rank</th>
               <th className="p-2">Player</th>
               <th className="p-2">Score</th>
+              <th className="p-2">Status</th>
             </tr>
           </thead>
           <tbody>
             {leaderboard.map((player, i) => (
               <tr key={i} className="border-t">
-                <td className="p-2">{i + 1}</td>
-                <td className="p-2">{player.name || "Player"}</td>
+                <td className="p-2">{player.name}</td>
                 <td className="p-2">{player.score}</td>
+                <td className={`p-2 font-semibold ${player.status === "Winner" ? "text-green-600" : "text-red-500"}`}>
+                  {player.status}
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
-        <p className="mt-4 text-center text-blue-600 font-semibold">🎉 Your Score: {score}</p>
         <div className="text-center mt-4">
           <button
             className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
