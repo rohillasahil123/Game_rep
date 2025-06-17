@@ -1,26 +1,32 @@
-const mongoose = require("mongoose");
+// const mongoose = require("mongoose");
 
-const quizSchema = new mongoose.Schema({
-  title: { type: String, required: true },
-  entryFee: { type: Number, default: 5 },
-  rewardPerQuestion: { type: Number, default: 1 },
-  open: { type: Boolean, default: true },
+// const quizSchema = new mongoose.Schema({
+//   title: { type: String, required: true },
+//   entryFee: { type: Number, default: 5 },
+//   rewardPerQuestion: { type: Number, default: 1 },
+//   open: { type: Boolean, default: true },
 
-  questions: [
-    {
-      question: String,
-      correctAnswer: String,
-      options: [String]
-    }
-  ],
+//   roomType: {
+//     type: String, // "5", "10", "25", etc.
+//     required: true
+//   },
 
-  players: [
-    {
-      userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-      fullName: String,
-      score: { type: Number, default: 0 }
-    }
-  ]
-}, { timestamps: true });
+//   questions: [
+//     {
+//       question: String,
+//       correctAnswer: String,
+//       options: [String]
+//     }
+//   ],
 
-module.exports = mongoose.model("Quiz", quizSchema);
+//   players: [
+//     {
+//       userId: { type: mongoose.Schema.Types.ObjectId, ref: "UserData" },
+//       fullName: String,
+//       score: { type: Number, default: 0 },
+//       isWinner: { type: Boolean, default: false }  // ✅ New field added
+//     }
+//   ]
+// }, { timestamps: true });
+
+// module.exports = mongoose.model("Quiz", quizSchema);

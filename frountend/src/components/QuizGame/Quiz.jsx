@@ -1,72 +1,36 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import { initializeSocket, joinQuizRoom, finishGame, onGameResult } from "../../socket"
 
 const Quiz = () => {
-  const [questions, setQuestions] = useState([]);
-  const [quizId, setQuizId] = useState(null);
+  const navigate = useNavigate();
+
+  const [questions] = useState([
+    {
+      question: "भारत की राजधानी क्या है?",
+      options: ["मुंबई", "दिल्ली", "कोलकाता", "चेन्नई"],
+      correctAnswer: "दिल्ली",
+    },
+    {
+      question: "भारत का राष्ट्रीय पशु कौन सा है?",
+      options: ["शेर", "चीता", "हाथी", "बाघ"],
+      correctAnswer: "बाघ",
+    },
+    {
+      question: "सौरमंडल का सबसे बड़ा ग्रह कौन सा है?",
+      options: ["पृथ्वी", "बृहस्पति", "मंगल", "शनि"],
+      correctAnswer: "बृहस्पति",
+    },
+  ]);
+
   const [current, setCurrent] = useState(0);
   const [selected, setSelected] = useState(null);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [leaderboard, setLeaderboard] = useState(null);
   const [score, setScore] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
   const [lastCorrectAnswer, setLastCorrectAnswer] = useState(null);
   const [transitioning, setTransitioning] = useState(false);
   const [timer, setTimer] = useState(5);
   const [skippedCount, setSkippedCount] = useState(0);
-
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const fetchQuestions = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const res = await axios.get("http://localhost:5000/quiz/random", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        setQuestions(res.data.questions);
-        setQuizId(res.data.quizId);
-      } catch (err) {
-        console.error("Error loading quiz:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchQuestions();
-  }, []);
-
-  useEffect(() => {
-    const fullName = localStorage.getItem("fullName");
-    const token = localStorage.getItem("token");
-
-    if (!token || !fullName) return;
-
-    const socket = initializeSocket(token);
-
-    if (quizId) {
-      joinQuizRoom(quizId, fullName);
-    }
-
-    onGameResult((result) => {
-      setLeaderboard([
-        {
-          name: result.winner.fullname,
-          score: result.winner.score,
-          status: "Winner",
-        },
-        {
-          name: result.loser.fullname,
-          score: result.loser.score,
-          status: "Loser",
-        },
-      ]);
-    });
-  }, [quizId]);
+  const [leaderboard, setLeaderboard] = useState(null);
 
   useEffect(() => {
     if (showAnswer || leaderboard) return;
@@ -79,69 +43,47 @@ const Quiz = () => {
     return () => clearInterval(interval);
   }, [timer, showAnswer]);
 
-  const handleNext = async (auto = false) => {
+  const handleNext = (auto = false) => {
     if (transitioning) return;
 
     const answer = auto ? null : selected;
+    const correct = questions[current].correctAnswer;
 
     setShowAnswer(true);
     setTransitioning(true);
-    setError("");
 
-    try {
-      const token = localStorage.getItem("token");
+    if (answer === correct) {
+      setScore((prev) => prev + 10);
+      setSkippedCount(0);
+    } else if (!answer) {
+      setSkippedCount((prev) => prev + 1);
+    } else {
+      setSkippedCount(0);
+    }
 
-      const res = await axios.post(
-        "http://localhost:5000/quiz/submit-answer",
-        {
-          quizId,
-          questionText: questions[current].question,
-          selectedOption: answer,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+    setLastCorrectAnswer(correct);
 
-      setLastCorrectAnswer(res.data.correctAnswer);
-
-      if (res.data.correct) {
-        setScore((prev) => prev + 10);
-        setSkippedCount(0);
-      } else if (!answer) {
-        setSkippedCount((prev) => prev + 1);
-      } else {
-        setSkippedCount(0);
+    setTimeout(() => {
+      if (skippedCount >= 2 && !answer) {
+        alert("❌ लगातार 3 सवाल छोड़े गए। आप गेम से बाहर हो गए हैं।");
+        navigate("/");
+        return;
       }
 
-      setTimeout(() => {
-        if (skippedCount >= 2 && !answer) {
-          alert("❌ लगातार 3 सवाल छोड़े गए। आप गेम से बाहर हो गए हैं।");
-          navigate("/");
-          return;
-        }
-
-        if (current < questions.length - 1) {
-          setCurrent((prev) => prev + 1);
-          setSelected(null);
-          setShowAnswer(false);
-          setLastCorrectAnswer(null);
-          setTransitioning(false);
-          setTimer(5);
-        } else {
-          const fullName = localStorage.getItem("fullName");
-          finishGame(quizId, score); // Notify backend of final score
-        }
-      }, 1500);
-    } catch (err) {
-      console.error("Submit answer error:", err);
-      setTransitioning(false);
-    }
+      if (current < questions.length - 1) {
+        setCurrent((prev) => prev + 1);
+        setSelected(null);
+        setShowAnswer(false);
+        setLastCorrectAnswer(null);
+        setTransitioning(false);
+        setTimer(5);
+      } else {
+        setLeaderboard([
+          { name: "You", score, status: "Completed" }
+        ]);
+      }
+    }, 1500);
   };
-
-  if (loading) return <div className="text-center py-20">Loading Quiz...</div>;
 
   if (leaderboard) {
     return (
@@ -160,7 +102,7 @@ const Quiz = () => {
               <tr key={i} className="border-t">
                 <td className="p-2">{player.name}</td>
                 <td className="p-2">{player.score}</td>
-                <td className={`p-2 font-semibold ${player.status === "Winner" ? "text-green-600" : "text-red-500"}`}>
+                <td className="p-2 font-semibold text-blue-700">
                   {player.status}
                 </td>
               </tr>
@@ -182,7 +124,7 @@ const Quiz = () => {
   return (
     <div className="max-w-2xl mx-auto mt-10 bg-white p-6 rounded-xl shadow">
       <h1 className="text-xl font-bold mb-4 text-blue-700 flex justify-between">
-        <span>Question {current + 1} of {questions.length}</span> <span>&nbsp; ⏱ {timer}s </span>
+        <span>Question {current + 1} of {questions.length}</span> <span>⏱ {timer}s</span>
       </h1>
       <h2 className="text-lg font-semibold mb-4">{questions[current]?.question}</h2>
 
@@ -206,7 +148,6 @@ const Quiz = () => {
             </div>
           );
         })}
-        {error && <p className="text-red-500 text-sm">{error}</p>}
       </div>
 
       <div className="flex justify-end">

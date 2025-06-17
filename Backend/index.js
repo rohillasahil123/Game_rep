@@ -14,6 +14,7 @@ const User = require("./Models/User_Model");
 const Wallet = require("./Models/Wallet_Model");
 const Quiz = require("./Models/QuizContest");
 const WithdrawRequest = require("./Models/WithdrawRequest");
+const Contest = require("./Models/Contest_Model")
 
 //✅ Middleware
 const authenticateToken = require("./middleware/Authantication");
@@ -72,6 +73,38 @@ app.post("/login", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+
+
+
+  
+// ===============================
+// 💸 Admin Routes
+// ===============================
+
+app.get("/quiz/all", async (req, res) => {
+  try {
+    const quizzes = await Quiz.find();
+    res.status(200).json({ quizzes });
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
+
+app.put("/quiz/close/:quizId", async (req, res) => {
+  try {
+    const { quizId } = req.params;
+    const quiz = await Quiz.findById(quizId);
+    if (!quiz) return res.status(404).json({ message: "Quiz not found" });
+    quiz.open = false;
+    await quiz.save();
+    res.status(200).json({ message: "Quiz closed" });
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 
 // ===============================
 // 👤 User Routes
@@ -139,108 +172,263 @@ app.post("/wallet/update", async (req, res) => {
   }
 });
 
+
+
+
+// ===============================
+// 👤 Contest Routes
+// ===============================
+
+
+app.post("/create-contests", async (req, res) => {
+  try {
+    const entryFees = [5, 10, 25, 50, 100, 200, 500];
+    const contestsToCreate = entryFees.map(fee => ({
+      entryFee: fee,
+      winningAmount: fee * 2 // double winning amount
+    }));
+
+    await Contest.insertMany(contestsToCreate);
+    res.status(201).json({ message: "Contests created successfully." });
+  } catch (error) {
+    console.error("Contest create error:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+
+
+app.get("/get-contests", async (req, res) => {
+  try {
+    const contests = await Contest.find().sort({ entryFee: 1 });
+    res.status(200).json({ contests });
+  } catch (error) {
+    console.error("Fetch contests error:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+
 // ===============================
 // 🎮 Quiz Routes
-// ===============================
+// ==============================
 
-app.post("/quiz/join", authenticateToken, async (req, res) => {
+app.post("/join/:quizId", async (req, res) => {
   try {
-    const { fullName } = req.body;
-    const userId = req.user.id;
+    const { quizId } = req.params;
+    const { userId, fullName } = req.body;
 
-    let quiz = await Quiz.findOne({ open: true });
-
-    if (!quiz) {
-      const allQuizzes = await Quiz.find();
-      const allQuestions = allQuizzes.flatMap(q => q.questions);
-      if (allQuestions.length < 10) return res.status(400).json({ message: "Not enough questions to create quiz" });
-      const shuffled = allQuestions.sort(() => 0.5 - Math.random());
-      const selected = shuffled.slice(0, 10);
-      quiz = await Quiz.create({
-        title: "Random Quiz",
-        entryFee: 5,
-        rewardPerQuestion: 1,
-        questions: selected,
-        players: []
-      });
+    if (!mongoose.Types.ObjectId.isValid(quizId)) {
+      return res.status(400).json({ message: "Invalid quiz ID" });
     }
 
-    if (!quiz.open) return res.status(400).json({ message: "Quiz is already closed" });
-
-    const wallet = await Wallet.findOne({ userId });
-    if (!wallet || wallet.balance < quiz.entryFee) return res.status(400).json({ message: "Insufficient balance" });
+    const quiz = await Quiz.findById(quizId);
+    if (!quiz || !quiz.open) {
+      return res.status(404).json({ message: "Quiz not found or not open" });
+    }
 
     const alreadyJoined = quiz.players.some(p => p.userId.toString() === userId);
-    if (alreadyJoined) return res.status(200).json({ message: "Already joined", quizId: quiz._id });
+    if (alreadyJoined) {
+      return res.status(400).json({ message: "User already joined this quiz" });
+    }
 
+    // Check and deduct entry fee from wallet
+    const wallet = await Wallet.findOne({ userId });
+    if (!wallet || wallet.balance < quiz.entryFee) {
+      return res.status(400).json({ message: "Insufficient wallet balance" });
+    }
+
+    // Deduct fee
     wallet.balance -= quiz.entryFee;
-    wallet.transactions.push({ type: "debit", amount: quiz.entryFee, description: `Joined quiz: ${quiz.title}` });
+    wallet.transactions.push({
+      type: "debit",
+      amount: quiz.entryFee,
+      description: `Joined quiz: ${quiz.title}`
+    });
     await wallet.save();
 
+    // Add user to quiz
     quiz.players.push({ userId, fullName });
     await quiz.save();
 
-    res.status(200).json({ message: "Quiz joined", quizId: quiz._id, balance: wallet.balance });
-  } catch (err) {
-    res.status(500).json({ message: "Server error", error: err.message });
+    res.status(200).json({
+      message: "Quiz joined successfully",
+      quizId: quiz._id,
+      entryFee: quiz.entryFee,
+      walletBalance: wallet.balance
+    });
+
+  } catch (error) {
+    console.error("Join quiz error:", error);
+    res.status(500).json({ message: "Internal Server Error" });
   }
 });
 
-app.get("/quiz/random", authenticateToken, async (req, res) => {
-  try {
-    const quiz = await Quiz.findOne({ open: true }).lean();
-    if (!quiz || !quiz.questions || quiz.questions.length === 0)
-      return res.status(404).json({ message: "No quiz or questions found" });
-    const count = Math.min(10, quiz.questions.length);
-    const shuffled = quiz.questions.sort(() => 0.5 - Math.random());
-    const selected = shuffled.slice(0, count).map(q => ({
-      question: q.question,
-      options: q.options,
-      correctAnswer: q.correctAnswer
-    }));
-    res.status(200).json({ questions: selected, quizId: quiz._id });
-  } catch (err) {
-    res.status(500).json({ message: "Server error", error: err.message });
-  }
-});
 
-app.post("/quiz/submit-answer", authenticateToken, async (req, res) => {
+app.post("/submit/:quizId", async (req, res) => {
   try {
-    const { quizId, questionText, selectedOption } = req.body;
-    const userId = req.user.id;
+    const { quizId } = req.params;
+    const { userId, questionIndex, selectedOption } = req.body;
+
     const quiz = await Quiz.findById(quizId);
     if (!quiz) return res.status(404).json({ message: "Quiz not found" });
-    const question = quiz.questions.find(q => q.question === questionText);
-    if (!question) return res.status(404).json({ message: "Question not found" });
+
+    const question = quiz.questions[questionIndex];
+    if (!question) return res.status(400).json({ message: "Invalid question index" });
+
+    const isCorrect = question.correctAnswer === selectedOption;
+
     const player = quiz.players.find(p => p.userId.toString() === userId);
-    if (!player) return res.status(403).json({ message: "User not joined in this quiz" });
-    if (selectedOption === question.correctAnswer) {
-      player.score += quiz.rewardPerQuestion;
-      await quiz.save();
-      return res.status(200).json({ correct: true, newScore: player.score });
-    } else {
-      return res.status(200).json({ correct: false, newScore: player.score });
+    if (!player) return res.status(404).json({ message: "Player not found in quiz" });
+
+    if (isCorrect) {
+      player.score += 1;
+
+      const wallet = await Wallet.findOne({ userId });
+      wallet.balance += quiz.rewardPerQuestion;
+      wallet.transactions.push({
+        type: "credit",
+        amount: quiz.rewardPerQuestion,
+        description: `Correct answer for quiz ${quiz.title}`
+      });
+      await wallet.save();
     }
-  } catch (err) {
-    res.status(500).json({ message: "Server error", error: err.message });
+
+    await quiz.save();
+
+    res.status(200).json({
+      message: isCorrect ? "Correct Answer" : "Wrong Answer",
+      isCorrect,
+      updatedScore: player.score
+    });
+  } catch (error) {
+    console.error("Submit answer error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 });
+
+app.get("/:quizId", async (req, res) => {
+  try {
+    const { quizId } = req.params;
+
+    const quiz = await Quiz.findById(quizId).populate("players.userId", "fullName email");
+    if (!quiz) return res.status(404).json({ message: "Quiz not found" });
+
+    res.status(200).json({ quiz });
+  } catch (error) {
+    console.error("Get quiz error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
+app.post("/distribute/:quizId", async (req, res) => {
+  const { quizId } = req.params;
+
+  try {
+    const quiz = await Quiz.findById(quizId);
+    if (!quiz || quiz.players.length !== 2) {
+      return res.status(400).json({ message: "Invalid quiz room or not enough players" });
+    }
+
+    const [p1, p2] = quiz.players;
+    let winner, loser;
+
+    if (p1.score > p2.score) {
+      winner = p1;
+      loser = p2;
+    } else if (p2.score > p1.score) {
+      winner = p2;
+      loser = p1;
+    } else {
+      // Draw - refund both players
+      for (const player of [p1, p2]) {
+        const user = await User.findById(player.userId);
+        if (user) {
+          const wallet = await Wallet.findOne({ userId: user._id });
+          if (wallet) {
+            wallet.balance += quiz.entryFee;
+            wallet.transactions.push({
+              type: "credit",
+              amount: quiz.entryFee,
+              description: "Refund (Draw)"
+            });
+            await wallet.save();
+          }
+        }
+      }
+
+      quiz.open = false;
+      await quiz.save();
+
+      return res.status(200).json({
+        message: "Match Draw - Entry Fee Refunded",
+        result: "draw"
+      });
+    }
+
+    const totalPrize = quiz.entryFee * 2;
+    const winnerPrize = Math.floor(totalPrize * 0.75);
+    const systemCut = totalPrize - winnerPrize;
+
+    const winnerUser = await User.findById(winner.userId);
+    const winnerWallet = await Wallet.findOne({ userId: winner.userId });
+
+    if (winnerUser && winnerWallet) {
+      winnerWallet.balance += winnerPrize;
+      winnerWallet.transactions.push({
+        type: "credit",
+        amount: winnerPrize,
+        description: "Quiz Winnings"
+      });
+      await winnerWallet.save();
+    }
+
+    quiz.open = false;
+    await quiz.save();
+
+    res.status(200).json({
+      message: "Winnings distributed",
+      winner: winner.fullName,
+      amount: winnerPrize,
+      systemCut
+    });
+  } catch (error) {
+    console.error("Distribute error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 
 // ===============================
 // 💸 LeaderBoard Routes
 // ===============================
 
-app.get("/quiz/leaderboard/:quizId", async (req, res) => {
+app.get("/leaderboard/:quizId", async (req, res) => {
   try {
     const { quizId } = req.params;
-    const quiz = await Quiz.findById(quizId).lean();
+
+    const quiz = await Quiz.findById(quizId).populate("players.userId", "fullName");
     if (!quiz) return res.status(404).json({ message: "Quiz not found" });
-    const sortedPlayers = quiz.players.sort((a, b) => b.score - a.score);
+
+    const sortedPlayers = quiz.players
+      .map(player => ({
+        fullName: player.fullName,
+        score: player.score
+      }))
+      .sort((a, b) => b.score - a.score);
+
     res.status(200).json({ leaderboard: sortedPlayers });
-  } catch (err) {
-    res.status(500).json({ message: "Server error", error: err.message });
+  } catch (error) {
+    console.error("Leaderboard error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 });
+
+
+
+
+
 
 // ===============================
 // 💸 Withdraw Routes
