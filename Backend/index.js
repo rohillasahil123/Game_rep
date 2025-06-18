@@ -12,7 +12,7 @@ const { initializeSocket } = require("./socket");
 //✅ Models
 const User = require("./Models/User_Model");
 const Wallet = require("./Models/Wallet_Model");
-const Quiz = require("./Models/QuizContest");
+const Quiz = require("./Models/QuizContest")
 const WithdrawRequest = require("./Models/WithdrawRequest");
 const Contest = require("./Models/Contest_Model")
 
@@ -35,23 +35,42 @@ initializeSocket(server);
 app.get("/", (req, res) => res.send("API is running..."));
 
 // ===============================
-// 🔐 Authentication Routes
+// 🔐authenticateTokenentication Routes
 // ===============================
 
 // Signup
 app.post("/signup", async (req, res) => {
   try {
     const { fullName, email, password, phone } = req.body;
-    if (!fullName || !email || !password || !phone) return res.status(400).json({ message: "All fields are required" });
+
+    if (!fullName || !email || !password || !phone) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
 
     const existingUser = await User.findOne({ phone });
-    if (existingUser) return res.status(409).json({ message: "User already exists" });
+    if (existingUser) {
+      return res.status(409).json({ message: "User already exists" });
+    }
 
     const hashPassword = await bcrypt.hash(password, 10);
-    const user = await User.create({ fullName, email, phone, password: hashPassword });
+    const user = await User.create({
+      fullName,
+      email,
+      phone,
+      password: hashPassword
+    });
+
     const wallet = await Wallet.create({ userId: user._id });
 
-    res.status(201).json({ message: "User registered", user, wallet });
+    // Remove password before sending response
+    const userWithoutPassword = user.toObject();
+    delete userWithoutPassword.password;
+
+    res.status(201).json({
+      message: "User registered",
+      user: userWithoutPassword,
+      wallet
+    });
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err.message });
   }
@@ -61,16 +80,39 @@ app.post("/signup", async (req, res) => {
 app.post("/login", async (req, res) => {
   try {
     const { phone, password } = req.body;
-    if (!phone || !password) return res.status(400).json({ message: "Phone and password required" });
 
-    const user = await User.findOne({ phone });
-    if (!user || !(await bcrypt.compare(password, user.password)))
+    if (!phone || !password) {
+      return res.status(400).json({ message: "Phone and password required" });
+    }
+
+    const user = await User.findOne({ phone }).select("+password");
+    if (!user) {
       return res.status(401).json({ message: "Invalid credentials" });
+    }
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
-    res.status(200).json({ message: "Login successful", user, token });
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "7d"
+    });
+
+    const wallet  = await Wallet.findOne({userId : user._id})
+
+    // Remove password before sending response
+    const userWithoutPassword = user.toObject();
+    delete userWithoutPassword.password;
+
+    res.status(200).json({
+      message: "Login successful",
+      token,
+      user: userWithoutPassword ,
+      wallet
+    });
   } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "Server error", error: err.message });
   }
 });
 
@@ -81,7 +123,7 @@ app.post("/login", async (req, res) => {
 // 💸 Admin Routes
 // ===============================
 
-app.get("/quiz/all", async (req, res) => {
+app.get("/quiz/all", authenticateToken , async (req, res) => {
   try {
     const quizzes = await Quiz.find();
     res.status(200).json({ quizzes });
@@ -121,6 +163,19 @@ app.get("/getUser/:userId", async (req, res) => {
   }
 });
 
+
+app.get("/me",authenticateToken, async (req, res) => {
+  try {
+    res.status(200).json({
+      success: true,
+      user: req.user,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+
 app.get("/getAllUser", async (req, res) => {
   try {
     const users = await User.find();
@@ -136,26 +191,44 @@ app.get("/getAllUser", async (req, res) => {
 
 app.get("/wallet/:userId", async (req, res) => {
   try {
-    const wallet = await Wallet.findOne({ userId: req.params.userId });
-    res.status(200).json({ wallet });
+    const { userId } = req.params;
+    const wallet = await Wallet.findOne({ userId });
+
+    if (!wallet) {
+      return res.status(404).json({ message: "Wallet not found" });
+    }
+
+    res.status(200).json({ balance: wallet.balance });
   } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "Server error", error: err.message });
   }
 });
 
-app.post("/wallet/add", authenticateToken, async (req, res) => {
+app.post("/add", async (req, res) => {
   try {
-    const { amount } = req.body;
-    if (!amount || amount <= 0) return res.status(400).json({ message: "Invalid amount" });
-    const wallet = await Wallet.findOne({ userId: req.user.id });
-    wallet.balance += amount;
-    wallet.transactions.push({ type: "credit", amount, description: "Manual Add" });
+    const { userId, amount } = req.body;
+
+    if (!userId || !amount) {
+      return res.status(400).json({ message: "userId and amount are required" });
+    }
+
+    let wallet = await Wallet.findOne({ userId });
+
+    if (!wallet) {
+      // Create new wallet if not exists
+      wallet = new Wallet({ userId, balance: amount });
+    } else {
+      wallet.balance += amount;
+    }
+
     await wallet.save();
+
     res.status(200).json({ message: "Amount added", balance: wallet.balance });
   } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "Server error", error: err.message });
   }
 });
+
 
 app.post("/wallet/update", async (req, res) => {
   try {
@@ -197,6 +270,7 @@ app.post("/create-contests", async (req, res) => {
 });
 
 
+// ✅ Get all contests
 
 app.get("/get-contests", async (req, res) => {
   try {
@@ -209,195 +283,218 @@ app.get("/get-contests", async (req, res) => {
 });
 
 
+
+app.post("/create-defaults", async (req, res) => {
+  const contests = [
+    { entryFee: 5, prize: 10 },
+    { entryFee: 10, prize: 20 },
+    { entryFee: 25, prize: 50 },
+    { entryFee: 50, prize: 100 },
+    { entryFee: 100, prize: 200 },
+    { entryFee: 200, prize: 400 },
+    { entryFee: 500, prize: 1000 },
+  ];
+
+  try {
+    await Contest.insertMany(contests);
+    res.status(201).json({ message: "Contests created successfully" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 // ===============================
 // 🎮 Quiz Routes
 // ==============================
 
-app.post("/join/:quizId", async (req, res) => {
+
+
+// ✅ Join contest (deduct fee, add player)
+app.post("/contest/join", async (req, res) => {
+  const { userId, contestId } = req.body;
   try {
-    const { quizId } = req.params;
-    const { userId, fullName } = req.body;
-
-    if (!mongoose.Types.ObjectId.isValid(quizId)) {
-      return res.status(400).json({ message: "Invalid quiz ID" });
-    }
-
-    const quiz = await Quiz.findById(quizId);
-    if (!quiz || !quiz.open) {
-      return res.status(404).json({ message: "Quiz not found or not open" });
-    }
-
-    const alreadyJoined = quiz.players.some(p => p.userId.toString() === userId);
-    if (alreadyJoined) {
-      return res.status(400).json({ message: "User already joined this quiz" });
-    }
-
-    // Check and deduct entry fee from wallet
+    const contest = await Contest.findById(contestId);
     const wallet = await Wallet.findOne({ userId });
-    if (!wallet || wallet.balance < quiz.entryFee) {
-      return res.status(400).json({ message: "Insufficient wallet balance" });
-    }
+    const user = await User.findById(userId);
 
-    // Deduct fee
-    wallet.balance -= quiz.entryFee;
-    wallet.transactions.push({
-      type: "debit",
-      amount: quiz.entryFee,
-      description: `Joined quiz: ${quiz.title}`
-    });
+    if (!contest || !wallet || !user) return res.status(404).json({ message: "Invalid data" });
+    if (wallet.balance < contest.entryFee) return res.status(400).json({ message: "Insufficient balance" });
+
+    wallet.balance -= contest.entryFee;
+    contest.players.push({ userId, fullName: user.fullName });
+
     await wallet.save();
+    await contest.save();
 
-    // Add user to quiz
-    quiz.players.push({ userId, fullName });
-    await quiz.save();
-
-    res.status(200).json({
-      message: "Quiz joined successfully",
-      quizId: quiz._id,
-      entryFee: quiz.entryFee,
-      walletBalance: wallet.balance
-    });
-
-  } catch (error) {
-    console.error("Join quiz error:", error);
-    res.status(500).json({ message: "Internal Server Error" });
+    res.json({ message: "Joined successfully", contest });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
 
-app.post("/submit/:quizId", async (req, res) => {
+// ✅ Get specific contest
+app.get("/contest/:id", async (req, res) => {
   try {
-    const { quizId } = req.params;
-    const { userId, questionIndex, selectedOption } = req.body;
+    const contest = await Contest.findById(req.params.id).populate("players.userId");
+    if (!contest) return res.status(404).json({ message: "Contest not found" });
 
-    const quiz = await Quiz.findById(quizId);
-    if (!quiz) return res.status(404).json({ message: "Quiz not found" });
-
-    const question = quiz.questions[questionIndex];
-    if (!question) return res.status(400).json({ message: "Invalid question index" });
-
-    const isCorrect = question.correctAnswer === selectedOption;
-
-    const player = quiz.players.find(p => p.userId.toString() === userId);
-    if (!player) return res.status(404).json({ message: "Player not found in quiz" });
-
-    if (isCorrect) {
-      player.score += 1;
-
-      const wallet = await Wallet.findOne({ userId });
-      wallet.balance += quiz.rewardPerQuestion;
-      wallet.transactions.push({
-        type: "credit",
-        amount: quiz.rewardPerQuestion,
-        description: `Correct answer for quiz ${quiz.title}`
-      });
-      await wallet.save();
-    }
-
-    await quiz.save();
-
-    res.status(200).json({
-      message: isCorrect ? "Correct Answer" : "Wrong Answer",
-      isCorrect,
-      updatedScore: player.score
-    });
-  } catch (error) {
-    console.error("Submit answer error:", error);
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
-app.get("/:quizId", async (req, res) => {
-  try {
-    const { quizId } = req.params;
-
-    const quiz = await Quiz.findById(quizId).populate("players.userId", "fullName email");
-    if (!quiz) return res.status(404).json({ message: "Quiz not found" });
-
-    res.status(200).json({ quiz });
-  } catch (error) {
-    console.error("Get quiz error:", error);
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
-
-app.post("/distribute/:quizId", async (req, res) => {
-  const { quizId } = req.params;
-
-  try {
-    const quiz = await Quiz.findById(quizId);
-    if (!quiz || quiz.players.length !== 2) {
-      return res.status(400).json({ message: "Invalid quiz room or not enough players" });
-    }
-
-    const [p1, p2] = quiz.players;
-    let winner, loser;
-
-    if (p1.score > p2.score) {
-      winner = p1;
-      loser = p2;
-    } else if (p2.score > p1.score) {
-      winner = p2;
-      loser = p1;
-    } else {
-      // Draw - refund both players
-      for (const player of [p1, p2]) {
-        const user = await User.findById(player.userId);
-        if (user) {
-          const wallet = await Wallet.findOne({ userId: user._id });
-          if (wallet) {
-            wallet.balance += quiz.entryFee;
-            wallet.transactions.push({
-              type: "credit",
-              amount: quiz.entryFee,
-              description: "Refund (Draw)"
-            });
-            await wallet.save();
-          }
+    const questions = await Quiz.aggregate([
+      { $match: { contestId: contest._id } },
+      { $sample: { size: 10 } }, // randomly pick 10
+      {
+        $project: {
+          questionText: 1,
+          options: 1,
+          _id: 1
+          // Do not expose correctIndex here
         }
       }
+    ]);
 
-      quiz.open = false;
-      await quiz.save();
-
-      return res.status(200).json({
-        message: "Match Draw - Entry Fee Refunded",
-        result: "draw"
-      });
-    }
-
-    const totalPrize = quiz.entryFee * 2;
-    const winnerPrize = Math.floor(totalPrize * 0.75);
-    const systemCut = totalPrize - winnerPrize;
-
-    const winnerUser = await User.findById(winner.userId);
-    const winnerWallet = await Wallet.findOne({ userId: winner.userId });
-
-    if (winnerUser && winnerWallet) {
-      winnerWallet.balance += winnerPrize;
-      winnerWallet.transactions.push({
-        type: "credit",
-        amount: winnerPrize,
-        description: "Quiz Winnings"
-      });
-      await winnerWallet.save();
-    }
-
-    quiz.open = false;
-    await quiz.save();
-
-    res.status(200).json({
-      message: "Winnings distributed",
-      winner: winner.fullName,
-      amount: winnerPrize,
-      systemCut
-    });
-  } catch (error) {
-    console.error("Distribute error:", error);
-    res.status(500).json({ message: "Server error" });
+    res.json({ contest, questions });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
+
+// ✅ Start contest when 2 players joined
+app.post("/start/:id", async (req, res) => {
+  try {
+    const contest = await Contest.findById(req.params.id);
+    if (contest.players.length === 2) {
+      // Logic to start quiz (emit via socket.io or status flag)
+      res.json({ message: "Contest started" });
+    } else {
+      res.status(400).json({ message: "Need 2 players to start" });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+
+app.post("/question", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id; // 👈 Extracted from JWT token
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const total = await Quiz.countDocuments();
+    if (total === 0) {
+      return res.status(404).json({ message: "No questions available." });
+    }
+
+    const randomIndex = Math.floor(Math.random() * total);
+    const question = await Quiz.findOne().skip(randomIndex).select("-__v");
+
+    if (!question) {
+      return res.status(500).json({ message: "Failed to fetch question." });
+    }
+
+    res.status(200).json({
+      message: "Question fetched successfully",
+      totalQuestions: total,
+      question,
+    });
+  } catch (err) {
+    console.error("Error fetching question:", err);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+
+// ✅ Submit answer (update score)
+app.post("/submit-answer", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { questionId, contestId, selectedAnswer } = req.body;
+
+    const question = await Quiz.findById(questionId);
+    if (!question) {
+      return res.status(404).json({ message: "Question not found" });
+    }
+
+    const isCorrect = question.correctAnswer === selectedAnswer;
+
+    const contest = await Contest.findById(contestId);
+    if (!contest) {
+      return res.status(404).json({ message: "Contest not found" });
+    }
+
+    const player = contest.players.find(p => p.userId.toString() === userId);
+    if (!player) {
+      return res.status(400).json({ message: "User not part of this contest" });
+    }
+
+    if (isCorrect) {
+      player.score += 10;
+      await contest.save();
+    }
+
+    res.status(200).json({
+      message: "Answer submitted",
+      correct: isCorrect,
+      updatedScore: player.score,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ✅ End contest and set winner
+app.post("/end/:id", async (req, res) => {
+  try {
+    const contest = await Contest.findById(req.params.id);
+    if (!contest) return res.status(404).json({ message: "Contest not found" });
+
+    const sorted = contest.players.sort((a, b) => b.score - a.score);
+    contest.winnerId = sorted[0].userId;
+    contest.isCompleted = true;
+
+    await contest.save();
+    res.json({ message: "Contest ended", winner: sorted[0] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ✅ Distribute prize
+app.post("/distribute/:id", async (req, res) => {
+  try {
+    const contest = await Contest.findById(req.params.id);
+    if (!contest.winnerId) return res.status(400).json({ message: "Winner not decided yet" });
+
+    const winnerWallet = await Wallet.findOne({ userId: contest.winnerId });
+    winnerWallet.balance += contest.prize;
+    await winnerWallet.save();
+
+    res.json({ message: "Prize distributed", prize: contest.prize });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ✅ Get leaderboard
+app.get("/leaderboard/:contestId", async (req, res) => {
+  try {
+    const contest = await Contest.findById(req.params.contestId).populate("players.userId");
+    const sorted = contest.players.sort((a, b) => b.score - a.score);
+    res.json(sorted);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+
+
+
 
 
 // ===============================
@@ -434,7 +531,7 @@ app.get("/leaderboard/:quizId", async (req, res) => {
 // 💸 Withdraw Routes
 // ===============================
 
-app.post("/withdraw", authenticateToken, async (req, res) => {
+app.post("/withdraw",authenticateToken, async (req, res) => {
   try {
     const { amount } = req.body;
     const userId = req.user.id;
@@ -447,7 +544,7 @@ app.post("/withdraw", authenticateToken, async (req, res) => {
   }
 });
 
-app.get("/history", authenticateToken, async (req, res) => {
+app.get("/history",authenticateToken, async (req, res) => {
   try {
     const wallet = await Wallet.findOne({ userId: req.user.id });
     res.status(200).json({ transactions: wallet.transactions });

@@ -1,50 +1,52 @@
-const fs = require("fs");
-const csv = require("csv-parser");
-require("../config/db");
-const Quiz = require("../Models/Quiz");
+const fs = require('fs').promises;
+  require("../config/db");
+const Quiz = require("../Models/QuizContest")
 
-const path = "D:/Game/Backend/Csv/QuizzyCSV.csv";
+  const path = "D:/Game/Backend/Csv/QuizzyCSV.csv";
 
 async function readCSVAndSaveToDB(filePath) {
   try {
-    const questions = [];
+    const data = await fs.readFile(filePath, 'utf8');
+    const lines = data.split('\n');
+    const output = [];
 
-    await new Promise((resolve, reject) => {
-      fs.createReadStream(filePath)
-        .pipe(csv())
-        .on("data", (row) => {
-          if (row["Question"] && row["Correct Answer"]) {
-            questions.push({
-              question: row["Question"],
-              correctAnswer: row["Correct Answer"],
-              options: [
-                row["Option A"],
-                row["Option B"],
-                row["Option C"],
-                row["Option D"]
-              ]
-            });
-          }
-        })
-        .on("end", resolve)
-        .on("error", reject);
+    lines.forEach((line) => {
+      const fields = line.split(',');
+      output.push(fields);
     });
 
-    const quiz = new Quiz({
-      title: "General Knowledge Quiz",
-      entryFee: 10,
-      rewardPerQuestion: 10,
-      questions: questions
-    });
+    for (let i = 0; i < output.length; i++) {  // Ensure we don't go out of bounds
+      const row = output[i];
+      const questionData = {
+        question: row[0],
+        correctAnswer: row[1],
+        options: row.slice(2, 6),
+        number: i + 1
+      };
 
-    console.log("📦 Total Questions:", questions.length);
-    console.log("🧾 First Question Sample:", questions[0]);
+      const existingQuestion = await Quiz.findOne({ number: questionData.number });
+      if (existingQuestion) {
+        console.log(`Duplicate question number: ${questionData.number}, skipping...`);
+        continue;
+      }
 
-    await quiz.save();
-    console.log("✅ Quiz with questions saved successfully");
+      const question = new Quiz(questionData);
+
+      try {
+        await question.save();
+        console.log(`Saved: ${question}`);
+      } catch (err) {
+        console.error("Error saving to DB:", err);
+      }
+    }
   } catch (err) {
-    console.error("❌ Error saving quiz:", err.message);
+    console.error("Error while reading the file:", err);
   }
 }
-
-readCSVAndSaveToDB(path);
+(async () => {
+  try {
+    await readCSVAndSaveToDB(path);
+  } catch (err) {
+    console.error(err)
+  }
+})();

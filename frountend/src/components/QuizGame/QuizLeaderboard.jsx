@@ -9,7 +9,7 @@ const leaderboardData = [
   { id: 5, name: "Neha", score: 65 },
 ];
 
-const Leaderboard = () => {
+const QuizLeaderboard = () => {
   return (
     <div className="min-h-screen bg-[#f9fafb] py-10 px-4 flex flex-col items-center">
       <h1 className="text-4xl font-extrabold text-blue-800 mb-8 text-center">
@@ -60,4 +60,4 @@ const Leaderboard = () => {
   );
 };
 
-export default Leaderboard;
+export default QuizLeaderboard;

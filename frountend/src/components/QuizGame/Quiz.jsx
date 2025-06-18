@@ -51,10 +51,11 @@ const Quiz = () => {
 
     setShowAnswer(true);
     setTransitioning(true);
-
+      
     if (answer === correct) {
       setScore((prev) => prev + 10);
       setSkippedCount(0);
+
     } else if (!answer) {
       setSkippedCount((prev) => prev + 1);
     } else {

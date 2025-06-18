@@ -4,8 +4,7 @@ const WalletSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "UserData",
-    required: true,
-    index: true
+    required: true
   },
   balance: {
     type: Number,
@@ -14,23 +13,17 @@ const WalletSchema = new mongoose.Schema({
   transactions: [
     {
       type: {
-        type: String,
-        enum: ['credit', 'debit'],
-        required: true
+        type: String, // 'credit' or 'debit'
+        enum: ['credit', 'debit']
       },
-      amount: {
-        type: Number,
-        required: true
-      },
+      amount: Number,
+      description: String,
       date: {
         type: Date,
         default: Date.now
-      },
-      description: {
-        type: String
       }
     }
   ]
-}, { timestamps: true });
+});
 
 module.exports = mongoose.model("Wallet", WalletSchema);

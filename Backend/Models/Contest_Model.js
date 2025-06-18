@@ -1,19 +1,26 @@
 const mongoose = require("mongoose");
 
-const contestSchema = new mongoose.Schema({
+const ContestSchema = new mongoose.Schema({
   entryFee: {
-    type: Number,
-    required: true,
-    enum: [5, 10, 25, 50, 100, 200, 500],
-  },
-  winningAmount: {
     type: Number,
     required: true
   },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  }
-});
+  prize: {
+    type: Number,
+    required: true
+  },
+  players: [
+    {
+      userId: { type: mongoose.Schema.Types.ObjectId, ref: "UserData" },
+      fullName: String,
+      score: { type: Number, default: 0 }
+    }
+  ],
+  isCompleted: {
+    type: Boolean,
+    default: false
+  },
+  winnerId: { type: mongoose.Schema.Types.ObjectId, ref: "UserData" }
+}, { timestamps: true });
 
-module.exports = mongoose.model("Contest", contestSchema);
+module.exports = mongoose.model("Contest", ContestSchema);
