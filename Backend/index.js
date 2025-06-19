@@ -9,6 +9,10 @@ const jwt = require("jsonwebtoken");
 const http = require("http");
 const { initializeSocket } = require("./socket");
 
+
+const OWNER_USER_ID = "6852fdb44055b9fdd86ffdd4"; 
+
+
 //✅ Models
 const User = require("./Models/User_Model");
 const Wallet = require("./Models/Wallet_Model");
@@ -258,7 +262,7 @@ app.post("/create-contests", async (req, res) => {
     const entryFees = [5, 10, 25, 50, 100, 200, 500];
     const contestsToCreate = entryFees.map(fee => ({
       entryFee: fee,
-      winningAmount: fee * 2 // double winning amount
+      winningAmount: fee * 2 
     }));
 
     await Contest.insertMany(contestsToCreate);
@@ -285,15 +289,16 @@ app.get("/get-contests", async (req, res) => {
 
 
 app.post("/create-defaults", async (req, res) => {
-  const contests = [
-    { entryFee: 5, prize: 10 },
-    { entryFee: 10, prize: 20 },
-    { entryFee: 25, prize: 50 },
-    { entryFee: 50, prize: 100 },
-    { entryFee: 100, prize: 200 },
-    { entryFee: 200, prize: 400 },
-    { entryFee: 500, prize: 1000 },
-  ];
+const contests = [
+  { entryFee: 5, prize: 8.1 },
+  { entryFee: 10, prize: 16.2 },
+  { entryFee: 25, prize: 40.5 },
+  { entryFee: 50, prize: 81 },
+  { entryFee: 100, prize: 162 },
+  { entryFee: 200, prize: 324 },
+  { entryFee: 500, prize: 810 },
+];
+
 
   try {
     await Contest.insertMany(contests);
@@ -311,7 +316,7 @@ app.post("/create-defaults", async (req, res) => {
 
 
 // ✅ Join contest (deduct fee, add player)
-app.post("/contest/join", async (req, res) => {
+app.post("/join", async (req, res) => {
   const { userId, contestId } = req.body;
   try {
     const contest = await Contest.findById(contestId);
@@ -348,7 +353,7 @@ app.get("/contest/:id", async (req, res) => {
           questionText: 1,
           options: 1,
           _id: 1
-          // Do not expose correctIndex here
+      
         }
       }
     ]);
@@ -378,7 +383,7 @@ app.post("/start/:id", async (req, res) => {
 
 app.post("/question", authenticateToken, async (req, res) => {
   try {
-    const userId = req.user.id; // 👈 Extracted from JWT token
+    const userId = req.user.id; 
 
     const user = await User.findById(userId);
     if (!user) {
@@ -433,7 +438,7 @@ app.post("/submit-answer", authenticateToken, async (req, res) => {
     }
 
     if (isCorrect) {
-      player.score += 10;
+      player.score += 1;
       await contest.save();
     }
 
@@ -454,42 +459,81 @@ app.post("/end/:id", async (req, res) => {
     if (!contest) return res.status(404).json({ message: "Contest not found" });
 
     const sorted = contest.players.sort((a, b) => b.score - a.score);
+
+    // Set the winner
     contest.winnerId = sorted[0].userId;
     contest.isCompleted = true;
 
     await contest.save();
-    res.json({ message: "Contest ended", winner: sorted[0] });
+
+    res.json({
+      message: "Contest ended",
+      winner: {
+        userId: sorted[0].userId,
+        fullName: sorted[0].fullName,
+        score: sorted[0].score
+      },
+      loser: sorted[1]
+        ? {
+            userId: sorted[1].userId,
+            fullName: sorted[1].fullName,
+            score: sorted[1].score
+          }
+        : null
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 // ✅ Distribute prize
+
 app.post("/distribute/:id", async (req, res) => {
   try {
-    const contest = await Contest.findById(req.params.id);
-    if (!contest.winnerId) return res.status(400).json({ message: "Winner not decided yet" });
+    const contest = await Contest.findById(req.params.id).populate("winnerId", "fullName email");
+    if (!contest || !contest.winnerId) {
+      return res.status(400).json({ message: "Winner not decided yet" });
+    }
 
-    const winnerWallet = await Wallet.findOne({ userId: contest.winnerId });
-    winnerWallet.balance += contest.prize;
+    const winnerWallet = await Wallet.findOne({ userId: contest.winnerId._id });
+    const ownerWallet = await Wallet.findOne({ userId: OWNER_USER_ID });
+
+    if (!winnerWallet || !ownerWallet) {
+      return res.status(404).json({ message: "Wallets not found" });
+    }
+
+    const winnerPrize = Math.floor(contest.prize * 0.81);
+    const ownerShare = contest.prize - winnerPrize;
+
+    winnerWallet.balance += winnerPrize;
+    ownerWallet.balance += ownerShare;
+
     await winnerWallet.save();
+    await ownerWallet.save();
 
-    res.json({ message: "Prize distributed", prize: contest.prize });
+    res.json({
+      message: "Prize distributed",
+      prize: contest.prize,
+      winnerShare: winnerPrize,
+      ownerShare: ownerShare,
+      winner: {
+        id: contest.winnerId._id,
+        fullName: contest.winnerId.fullName,
+        email: contest.winnerId.email,
+        updatedWalletBalance: winnerWallet.balance
+      },
+      owner: {
+        userId: OWNER_USER_ID,
+        updatedWalletBalance: ownerWallet.balance
+      }
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// ✅ Get leaderboard
-app.get("/leaderboard/:contestId", async (req, res) => {
-  try {
-    const contest = await Contest.findById(req.params.contestId).populate("players.userId");
-    const sorted = contest.players.sort((a, b) => b.score - a.score);
-    res.json(sorted);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+
 
 
 
@@ -501,27 +545,16 @@ app.get("/leaderboard/:contestId", async (req, res) => {
 // 💸 LeaderBoard Routes
 // ===============================
 
-app.get("/leaderboard/:quizId", async (req, res) => {
+// ✅ Get leaderboard
+app.get("/leaderboard/:contestId", async (req, res) => {
   try {
-    const { quizId } = req.params;
-
-    const quiz = await Quiz.findById(quizId).populate("players.userId", "fullName");
-    if (!quiz) return res.status(404).json({ message: "Quiz not found" });
-
-    const sortedPlayers = quiz.players
-      .map(player => ({
-        fullName: player.fullName,
-        score: player.score
-      }))
-      .sort((a, b) => b.score - a.score);
-
-    res.status(200).json({ leaderboard: sortedPlayers });
-  } catch (error) {
-    console.error("Leaderboard error:", error);
-    res.status(500).json({ message: "Server error" });
+    const contest = await Contest.findById(req.params.contestId).populate("players.userId");
+    const sorted = contest.players.sort((a, b) => b.score - a.score);
+    res.json(sorted);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
-
 
 
 

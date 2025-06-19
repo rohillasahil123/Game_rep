@@ -2,7 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 
 const quizCategories = [
-  { title: "General Knowledge", route: "/quiz/gk", color: "bg-blue-500" },
+  { title: "General Knowledge", route: "/quiz/list", color: "bg-blue-500" },
   { title: "Sports Quiz", route: "/quiz/sports", color: "bg-green-500" },
   { title: "Filmy Quiz", route: "/quiz/filmy", color: "bg-yellow-500" },
   { title: "Science Quiz", route: "/quiz/science", color: "bg-purple-500" },

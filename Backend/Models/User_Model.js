@@ -17,11 +17,15 @@ const UserSchema = new mongoose.Schema({
   password: {
     type: String,
     required: true,
-    select: false  // ✅ Hide password by default when fetching user
+    select: false 
   },
   walletId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Wallet"
+  },
+  Score: {
+    type: Number,
+    default: 0
   },
   referralCode: String,
   referredBy: String,
@@ -32,7 +36,6 @@ const UserSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
-// ✅ Optional: auto include virtual fields in JSON
 UserSchema.set('toJSON', { virtuals: true });
 UserSchema.set('toObject', { virtuals: true });
 

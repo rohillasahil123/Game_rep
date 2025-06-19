@@ -1,17 +1,33 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 import { FaCrown, FaCoins } from "react-icons/fa";
 
-const contests = [
-  { id: 1, entryFee: 5, prize: 10 },
-  { id: 2, entryFee: 10, prize: 20 },
-  { id: 3, entryFee: 25, prize: 50 },
-  { id: 4, entryFee: 50, prize: 100 },
-  { id: 5, entryFee: 100, prize: 200 },
-  { id: 6, entryFee: 200, prize: 400 },
-  { id: 7, entryFee: 500, prize: 1000 },
-];
-
 const QuizContestList = () => {
+  const [contests, setContests] = useState([]);
+
+  useEffect(() => {
+    const fetchContests = async () => {
+      try {
+        const response = await axios.get("http://localhost:5000/get-contests");
+        setContests(response.data.contests);
+        console.log(contests , "ty")
+      } catch (error) {
+        console.error("Error fetching contests:", error);
+      }
+    };
+    fetchContests();
+  }, []);
+
+
+
+
+  const HandleJoinContest = ()=>{
+
+alert("join")
+
+
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#eef2ff] to-[#f9fafb] flex flex-col items-center py-12 px-4">
       <h1 className="text-4xl font-extrabold text-blue-900 mb-12 text-center tracking-tight">
@@ -21,10 +37,9 @@ const QuizContestList = () => {
       <div className="w-full max-w-6xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {contests.map((contest, index) => (
           <div
-            key={contest.id}
+            key={contest._id}
             className="relative bg-white rounded-2xl border border-gray-200 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200 p-6 flex flex-col items-center text-center"
           >
-            {/* Top badge */}
             {index === 3 && (
               <div className="absolute top-0 left-0 bg-yellow-400 text-white text-xs font-bold px-3 py-1 rounded-tr-xl rounded-bl-xl">
                 🔥 Most Played
@@ -49,14 +64,14 @@ const QuizContestList = () => {
               <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full">100% Legal</span>
             </div>
 
-            {/* Progress bar (optional feature) */}
             <div className="w-full bg-gray-100 h-2 rounded-full mb-4">
               <div className="h-2 bg-blue-500 rounded-full" style={{ width: "50%" }}></div>
             </div>
 
             <button
-              onClick={() => alert(`Joining ₹${contest.entryFee} Contest`)}
+              onClick={HandleJoinContest}
               className="mt-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold text-sm py-2.5 px-6 rounded-full flex items-center gap-2 shadow-lg"
+             
             >
               <FaCoins className="text-yellow-300" />
               Join Now
