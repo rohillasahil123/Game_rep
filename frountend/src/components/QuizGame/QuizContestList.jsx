@@ -1,16 +1,20 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { FaCrown, FaCoins } from "react-icons/fa";
+import useContestStore from "../../Store/useContestStore";
+import { useNavigate } from "react-router-dom";
 
 const QuizContestList = () => {
   const [contests, setContests] = useState([]);
+  const [joiningContestId, setJoiningContestId] = useState(null); 
+  const { joinContest, loading, joinResult, error } = useContestStore();
+  const navigate = useNavigate()
 
   useEffect(() => {
     const fetchContests = async () => {
       try {
         const response = await axios.get("http://localhost:5000/get-contests");
         setContests(response.data.contests);
-        console.log(contests , "ty")
       } catch (error) {
         console.error("Error fetching contests:", error);
       }
@@ -18,15 +22,20 @@ const QuizContestList = () => {
     fetchContests();
   }, []);
 
+  const HandleJoinContest = async (contestId) => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return alert("Please login first");
 
-
-
-  const HandleJoinContest = ()=>{
-
-alert("join")
-
-
-  }
+      setJoiningContestId(contestId);
+      await joinContest(contestId, token);
+      setJoiningContestId(null); 
+navigate("/quiz/banner")
+    } catch (error) {
+      console.error("Join error:", error);
+      setJoiningContestId(null); 
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#eef2ff] to-[#f9fafb] flex flex-col items-center py-12 px-4">
@@ -69,12 +78,11 @@ alert("join")
             </div>
 
             <button
-              onClick={HandleJoinContest}
+              onClick={() => HandleJoinContest(contest._id)}
               className="mt-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold text-sm py-2.5 px-6 rounded-full flex items-center gap-2 shadow-lg"
-             
             >
               <FaCoins className="text-yellow-300" />
-              Join Now
+              {joiningContestId === contest._id && loading ? "Joining..." : "Join Now"}
             </button>
           </div>
         ))}

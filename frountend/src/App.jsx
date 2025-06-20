@@ -24,7 +24,7 @@ const App = () => {
        <Route path='/cricket' element={<CricketDashboard/>} />
        <Route path='/quiz' element={ <QuizSelection/> } ></Route>
        <Route path='/quiz/gk' element={<Quiz/>} />
-       <Route   path='/quiz/join/banner' element={<QuizContestJoinBanner/>} ></Route>
+       <Route   path='/quiz/banner' element={<QuizContestJoinBanner/>} ></Route>
        <Route   path='/quiz/list' element={ <QuizContestList/>} ></Route>
            <Route   path='/quiz/join/win' element={ <GameResultBanner/>} ></Route>
             <Route   path='/quiz/leaderboard' element={ <QuizLeaderboard/>} ></Route>

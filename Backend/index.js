@@ -316,27 +316,72 @@ const contests = [
 
 
 // ✅ Join contest (deduct fee, add player)
-app.post("/join", async (req, res) => {
-  const { userId, contestId } = req.body;
+app.post("/join", authenticateToken, async (req, res) => {
+  const { contestId } = req.body;
+  const userId = req.user.id;
+
   try {
     const contest = await Contest.findById(contestId);
     const wallet = await Wallet.findOne({ userId });
     const user = await User.findById(userId);
 
-    if (!contest || !wallet || !user) return res.status(404).json({ message: "Invalid data" });
-    if (wallet.balance < contest.entryFee) return res.status(400).json({ message: "Insufficient balance" });
+    if (!contest || !wallet || !user) {
+      return res.status(404).json({ message: "Invalid data" });
+    }
 
+    if (wallet.balance < contest.entryFee) {
+      return res.status(400).json({ message: "Insufficient balance" });
+    }
+
+    // Already full?
+    if (contest.players.length >= 2) {
+      return res.status(400).json({ message: "Contest already full" });
+    }
+
+    // Deduct balance and join
     wallet.balance -= contest.entryFee;
     contest.players.push({ userId, fullName: user.fullName });
 
     await wallet.save();
     await contest.save();
 
+    // ✅ Auto-create if contest is now full
+    if (contest.players.length === 2) {
+      const newContest = new Contest({
+        entryFee: contest.entryFee,
+        prize: contest.prize,
+        players: [],
+        isCompleted: false,
+      });
+      await newContest.save();
+    }
+
     res.json({ message: "Joined successfully", contest });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
+
+
+
+//Contest get user 
+app.get("/contest/:contestId/players", async (req, res) => {
+  const { contestId } = req.params;
+
+  try {
+    const contest = await Contest.findById(contestId);
+
+    if (!contest) {
+      return res.status(404).json({ message: "Contest not found" });
+    }
+
+    // Return only players list
+    res.json({ players: contest.players });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 
 // ✅ Get specific contest
@@ -347,7 +392,7 @@ app.get("/contest/:id", async (req, res) => {
 
     const questions = await Quiz.aggregate([
       { $match: { contestId: contest._id } },
-      { $sample: { size: 10 } }, // randomly pick 10
+      { $sample: { size: 10 } }, 
       {
         $project: {
           questionText: 1,
