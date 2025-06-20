@@ -15,10 +15,13 @@ function initializeSocket(server) {
 
     // ✅ Join Quiz Room
     socket.on("joinQuiz", ({ roomId, fullname, userId }) => {
+      console.log("📥 joinQuiz called with:", { roomId, fullname, userId });
+
       if (!roomUsers[roomId]) roomUsers[roomId] = [];
 
-      // ✅ Limit room to 2 players
+      // Already full
       if (roomUsers[roomId].length >= 2) {
+        console.log("❌ Room full:", roomId);
         socket.emit("roomFull", { message: "Room is already full." });
         return;
       }
@@ -27,6 +30,8 @@ function initializeSocket(server) {
       roomUsers[roomId].push({ socketId: socket.id, fullname, userId });
 
       console.log(`✅ ${fullname} joined room ${roomId}`);
+      console.log("👥 Current room users:", roomUsers[roomId]);
+
       io.to(roomId).emit("playerJoined", { players: roomUsers[roomId] });
     });
 
@@ -35,22 +40,21 @@ function initializeSocket(server) {
       const user = roomUsers[roomId]?.find(u => u.socketId === socket.id);
       if (!user) return;
 
+      console.log(`🏁 ${user.fullname} finished game with score: ${score}`);
+
       if (!finishedPlayers[roomId]) finishedPlayers[roomId] = [];
       finishedPlayers[roomId].push({ ...user, score });
 
-      console.log(`🏁 ${user.fullname} finished with score ${score}`);
-
-      // ✅ Continue only when both players finished
+      // Wait until both players finish
       if (finishedPlayers[roomId].length === 2) {
         const [p1, p2] = finishedPlayers[roomId];
         let result = { winner: null, loser: null, draw: false };
 
-        const entryFee = parseInt(roomId); // assumes roomId is the fee
+        const entryFee = parseInt(roomId); // RoomId used as fee
         const totalPrize = entryFee * 2;
-        const winnerPrize = Math.floor(totalPrize * 0.82); // 82%
+        const winnerPrize = Math.floor(totalPrize * 0.82);
         const systemCut = totalPrize - winnerPrize;
 
-        // ✅ Determine winner/loser or draw
         if (p1.score > p2.score) {
           result.winner = p1;
           result.loser = p2;
@@ -63,7 +67,6 @@ function initializeSocket(server) {
 
         try {
           if (result.draw) {
-            // ✅ Refund both players
             for (const player of [p1, p2]) {
               await Wallet.findOneAndUpdate(
                 { userId: player.userId },
@@ -79,8 +82,8 @@ function initializeSocket(server) {
                 }
               );
             }
+            console.log("↩️ Match draw: Refund issued to both players");
           } else {
-            // ✅ Winner gets 82%, loser gets nothing (loss recorded)
             await Wallet.findOneAndUpdate(
               { userId: result.winner.userId },
               {
@@ -107,6 +110,8 @@ function initializeSocket(server) {
                 },
               }
             );
+
+            console.log(`🏆 ${result.winner.fullname} won ₹${winnerPrize}`);
           }
         } catch (err) {
           console.error("❌ Wallet update error:", err.message);
@@ -119,12 +124,12 @@ function initializeSocket(server) {
           systemCut,
         });
 
-        // ✅ Cleanup
+        // Clean up
         delete finishedPlayers[roomId];
       }
     });
 
-    // ✅ User Disconnects
+    // ✅ Handle Disconnection
     socket.on("disconnect", () => {
       console.log("❌ User disconnected:", socket.id);
 
@@ -134,16 +139,15 @@ function initializeSocket(server) {
           (user) => user.socketId !== socket.id
         );
 
-        // ✅ Notify if someone left
         if (prevLength !== roomUsers[roomId].length) {
           io.to(roomId).emit("playerLeft", {
             players: roomUsers[roomId],
           });
 
-          // ✅ Clean empty rooms
           if (roomUsers[roomId].length === 0) {
             delete roomUsers[roomId];
             delete finishedPlayers[roomId];
+            console.log(`🧹 Cleaned up empty room: ${roomId}`);
           }
         }
       }

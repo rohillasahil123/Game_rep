@@ -7,7 +7,7 @@ const morgan = require("morgan");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const http = require("http");
-const { initializeSocket } = require("./socket");
+const { initializeSocket } = require("./socket.js");
 
 
 const OWNER_USER_ID = "6852fdb44055b9fdd86ffdd4"; 
@@ -33,7 +33,7 @@ app.use(express.json());
 app.use(morgan("dev"));
 
 // Initialize socket
-initializeSocket(server);
+initializeSocket(server); 
 
 //✅ Test Route
 app.get("/", (req, res) => res.send("API is running..."));
@@ -274,18 +274,6 @@ app.post("/create-contests", async (req, res) => {
 });
 
 
-// ✅ Get all contests
-
-app.get("/get-contests", async (req, res) => {
-  try {
-    const contests = await Contest.find().sort({ entryFee: 1 });
-    res.status(200).json({ contests });
-  } catch (error) {
-    console.error("Fetch contests error:", error);
-    res.status(500).json({ message: "Internal Server Error" });
-  }
-});
-
 
 
 app.post("/create-defaults", async (req, res) => {
@@ -361,6 +349,20 @@ app.post("/join", authenticateToken, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+
+app.get("/get-contests", async (req, res) => {
+  try {
+    const contests = await Contest.find({
+      isCompleted: false,
+      $expr: { $lt: [{ $size: "$players" }, 2] }
+    });
+    res.json({ contests });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 
 

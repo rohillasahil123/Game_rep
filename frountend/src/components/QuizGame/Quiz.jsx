@@ -1,27 +1,16 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import useContestStore from "../../Store/useContestStore"
+
+const TOTAL_QUESTIONS = 10;
 
 const Quiz = () => {
   const navigate = useNavigate();
+  const { joinResult } = useContestStore(); // ✅ Zustand
+  const contestId = joinResult?.contest?._id;
 
-  const [questions] = useState([
-    {
-      question: "भारत की राजधानी क्या है?",
-      options: ["मुंबई", "दिल्ली", "कोलकाता", "चेन्नई"],
-      correctAnswer: "दिल्ली",
-    },
-    {
-      question: "भारत का राष्ट्रीय पशु कौन सा है?",
-      options: ["शेर", "चीता", "हाथी", "बाघ"],
-      correctAnswer: "बाघ",
-    },
-    {
-      question: "सौरमंडल का सबसे बड़ा ग्रह कौन सा है?",
-      options: ["पृथ्वी", "बृहस्पति", "मंगल", "शनि"],
-      correctAnswer: "बृहस्पति",
-    },
-  ]);
-
+  const [questions, setQuestions] = useState([]);
   const [current, setCurrent] = useState(0);
   const [selected, setSelected] = useState(null);
   const [score, setScore] = useState(0);
@@ -29,11 +18,51 @@ const Quiz = () => {
   const [lastCorrectAnswer, setLastCorrectAnswer] = useState(null);
   const [transitioning, setTransitioning] = useState(false);
   const [timer, setTimer] = useState(5);
-  const [skippedCount, setSkippedCount] = useState(0);
   const [leaderboard, setLeaderboard] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const fetchQuestion = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("token");
+      const res = await axios.post("http://localhost:5000/question", {}, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.data?.question) {
+        setQuestions((prev) => [...prev, res.data.question]);
+      }
+    } catch (err) {
+      console.error("❌ Error fetching question:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const submitAnswer = async (questionId, selectedAnswer) => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.post("http://localhost:5000/submit-answer", {
+        questionId,
+        contestId,
+        selectedAnswer
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      return res.data.correct;
+    } catch (err) {
+      console.error("❌ Error submitting answer:", err);
+      return false;
+    }
+  };
 
   useEffect(() => {
-    if (showAnswer || leaderboard) return;
+    if (contestId) {
+      fetchQuestion();
+    }
+  }, [contestId]);
+
+  useEffect(() => {
+    if (showAnswer || leaderboard || loading) return;
     if (timer === 0) {
       handleNext(true);
     }
@@ -41,50 +70,51 @@ const Quiz = () => {
       setTimer((prev) => prev - 1);
     }, 1000);
     return () => clearInterval(interval);
-  }, [timer, showAnswer]);
+  }, [timer, showAnswer, loading]);
 
-  const handleNext = (auto = false) => {
-    if (transitioning) return;
+  const handleNext = async (auto = false) => {
+    if (transitioning || !questions[current]) return;
 
+    const question = questions[current];
     const answer = auto ? null : selected;
-    const correct = questions[current].correctAnswer;
 
     setShowAnswer(true);
     setTransitioning(true);
-      
-    if (answer === correct) {
-      setScore((prev) => prev + 10);
-      setSkippedCount(0);
 
-    } else if (!answer) {
-      setSkippedCount((prev) => prev + 1);
-    } else {
-      setSkippedCount(0);
-    }
+    const correct = await submitAnswer(question._id, answer);
+    if (correct) setScore((prev) => prev + 10);
+    setLastCorrectAnswer(question.correctAnswer);
 
-    setLastCorrectAnswer(correct);
-
-    setTimeout(() => {
-      if (skippedCount >= 2 && !answer) {
-        alert("❌ लगातार 3 सवाल छोड़े गए। आप गेम से बाहर हो गए हैं।");
-        navigate("/");
-        return;
-      }
-
-      if (current < questions.length - 1) {
+    setTimeout(async () => {
+      if (current + 1 < TOTAL_QUESTIONS) {
         setCurrent((prev) => prev + 1);
         setSelected(null);
         setShowAnswer(false);
         setLastCorrectAnswer(null);
         setTransitioning(false);
         setTimer(5);
+        await fetchQuestion();
       } else {
-        setLeaderboard([
-          { name: "You", score, status: "Completed" }
-        ]);
+        setLeaderboard([{ name: "You", score, status: "Completed" }]);
       }
     }, 1500);
   };
+
+  if (!contestId) {
+    return (
+      <div className="text-center mt-20 text-red-600 font-semibold">
+        ⚠️ No contest joined. Please join a contest first.
+      </div>
+    );
+  }
+
+  if (loading || questions.length === 0) {
+    return (
+      <div className="text-center mt-20 text-blue-500 font-semibold">
+        🔄 Loading Question...
+      </div>
+    );
+  }
 
   if (leaderboard) {
     return (
@@ -103,9 +133,7 @@ const Quiz = () => {
               <tr key={i} className="border-t">
                 <td className="p-2">{player.name}</td>
                 <td className="p-2">{player.score}</td>
-                <td className="p-2 font-semibold text-blue-700">
-                  {player.status}
-                </td>
+                <td className="p-2 font-semibold text-blue-700">{player.status}</td>
               </tr>
             ))}
           </tbody>
@@ -122,15 +150,26 @@ const Quiz = () => {
     );
   }
 
+  const currentQuestion = questions[current];
+
   return (
     <div className="max-w-2xl mx-auto mt-10 bg-white p-6 rounded-xl shadow">
+      <div className="w-full bg-gray-200 rounded-full h-3 mb-4">
+        <div
+          className="bg-blue-500 h-3 rounded-full transition-all duration-500"
+          style={{ width: `${((current + 1) / TOTAL_QUESTIONS) * 100}%` }}
+        ></div>
+      </div>
+
       <h1 className="text-xl font-bold mb-4 text-blue-700 flex justify-between">
-        <span>Question {current + 1} of {questions.length}</span> <span>⏱ {timer}s</span>
+        <span>Question {current + 1} / {TOTAL_QUESTIONS}</span>
+        <span>⏱ {timer}s</span>
       </h1>
-      <h2 className="text-lg font-semibold mb-4">{questions[current]?.question}</h2>
+
+      <h2 className="text-lg font-semibold mb-4">{currentQuestion?.question}</h2>
 
       <div className="space-y-3 mb-4">
-        {questions[current]?.options.map((opt, i) => {
+        {currentQuestion?.options.map((opt, i) => {
           const isCorrect = showAnswer && opt === lastCorrectAnswer;
           const isWrong = showAnswer && opt === selected && opt !== lastCorrectAnswer;
           return (
@@ -157,7 +196,7 @@ const Quiz = () => {
           onClick={() => handleNext(false)}
           disabled={showAnswer}
         >
-          {current < questions.length - 1 ? "Next" : "Finish"}
+          {current + 1 === TOTAL_QUESTIONS ? "Finish" : "Next"}
         </button>
       </div>
     </div>

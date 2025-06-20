@@ -1,4 +1,4 @@
-import React from 'react'
+import { useEffect } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import Signup from './components/Auth/Signup'
 import Login from './components/Auth/Login'
@@ -11,11 +11,21 @@ import QuizContestJoinBanner from './components/QuizGame/QuizContestJoinBanner'
 import QuizContestList from './components/QuizGame/QuizContestList'
 import GameResultBanner from './components/QuizGame/GameResultBanner'
 import QuizLeaderboard from './components/QuizGame/QuizLeaderboard'
+import { initializeSocket } from "./socket";
 
 
 const App = () => {
+
+
+   useEffect(() => {
+  const socket = initializeSocket(); // call once
+  console.log("56") 
+}, []);
   return (
   <>
+
+
+ 
   <Header_Page/>
     <Routes>
     <Route path='/signup'  element={<Signup/>}  /> 
@@ -23,7 +33,7 @@ const App = () => {
        <Route  path='/' element={<Home_page/>} />
        <Route path='/cricket' element={<CricketDashboard/>} />
        <Route path='/quiz' element={ <QuizSelection/> } ></Route>
-       <Route path='/quiz/gk' element={<Quiz/>} />
+       <Route path='/quiz/question' element={<Quiz/>} />
        <Route   path='/quiz/banner' element={<QuizContestJoinBanner/>} ></Route>
        <Route   path='/quiz/list' element={ <QuizContestList/>} ></Route>
            <Route   path='/quiz/join/win' element={ <GameResultBanner/>} ></Route>

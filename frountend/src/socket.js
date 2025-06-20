@@ -1,3 +1,4 @@
+// socket.js
 import { io } from "socket.io-client";
 
 let socket = null;
@@ -22,35 +23,33 @@ export const initializeSocket = (token) => {
 // ✅ Get existing socket instance
 export const getSocket = () => socket;
 
-// ✅ Join a quiz room with roomId and fullname
-export const joinQuizRoom = (roomId, fullname) => {
+// ✅ Join a quiz room
+export const joinQuizRoom = (roomId, fullname, userId) => {
   if (socket) {
-    socket.emit("joinQuiz", { roomId, fullname });
+    socket.emit("joinQuiz", { roomId, fullname, userId });
   }
 };
 
-// ✅ Send user's final score to backend
+// ✅ Send final score
 export const finishGame = (roomId, score) => {
   if (socket) {
     socket.emit("gameFinished", { roomId, score });
   }
 };
 
-// ✅ Listen when a player joins
+// ✅ Listeners
 export const onPlayerJoined = (callback) => {
   if (socket) {
     socket.on("playerJoined", callback);
   }
 };
 
-// ✅ Listen when a player leaves
 export const onPlayerLeft = (callback) => {
   if (socket) {
     socket.on("playerLeft", callback);
   }
 };
 
-// ✅ Listen for game result (win/lose)
 export const onGameResult = (callback) => {
   if (socket) {
     socket.on("gameResult", callback);
