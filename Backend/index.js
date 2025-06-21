@@ -36,14 +36,14 @@ app.use(morgan("dev"));
 initializeSocket(server); 
 
 //✅ Test Route
-app.get("/", (req, res) => res.send("API is running..."));
+app.get("/v1/", (req, res) => res.send("API is running..."));
 
 // ===============================
 // 🔐authenticateTokenentication Routes
 // ===============================
 
 // Signup
-app.post("/signup", async (req, res) => {
+app.post("/v1/signup", async (req, res) => {
   try {
     const { fullName, email, password, phone } = req.body;
 
@@ -81,7 +81,7 @@ app.post("/signup", async (req, res) => {
 });
 
 // Login
-app.post("/login", async (req, res) => {
+app.post("/v1/login", async (req, res) => {
   try {
     const { phone, password } = req.body;
 
@@ -127,7 +127,7 @@ app.post("/login", async (req, res) => {
 // 💸 Admin Routes
 // ===============================
 
-app.get("/quiz/all", authenticateToken , async (req, res) => {
+app.get("/v1/quiz/all", authenticateToken , async (req, res) => {
   try {
     const quizzes = await Quiz.find();
     res.status(200).json({ quizzes });
@@ -138,7 +138,7 @@ app.get("/quiz/all", authenticateToken , async (req, res) => {
 
 
 
-app.put("/quiz/close/:quizId", async (req, res) => {
+app.put("/v1/quiz/close/:quizId", async (req, res) => {
   try {
     const { quizId } = req.params;
     const quiz = await Quiz.findById(quizId);
@@ -156,7 +156,7 @@ app.put("/quiz/close/:quizId", async (req, res) => {
 // 👤 User Routes
 // ===============================
 
-app.get("/getUser/:userId", async (req, res) => {
+app.get("/v1/getUser/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
     const user = await User.findById(userId);
@@ -168,7 +168,7 @@ app.get("/getUser/:userId", async (req, res) => {
 });
 
 
-app.get("/me",authenticateToken, async (req, res) => {
+app.get("/v1/me",authenticateToken, async (req, res) => {
   try {
     res.status(200).json({
       success: true,
@@ -180,7 +180,7 @@ app.get("/me",authenticateToken, async (req, res) => {
 });
 
 
-app.get("/getAllUser", async (req, res) => {
+app.get("/v1/getAllUser", async (req, res) => {
   try {
     const users = await User.find();
     res.status(200).json({ users });
@@ -193,9 +193,9 @@ app.get("/getAllUser", async (req, res) => {
 // 💰 Wallet Routes
 // ===============================
 
-app.get("/wallet/:userId", async (req, res) => {
+app.get("/v1/wallet/:userId",authenticateToken  ,async (req, res) => {
   try {
-    const { userId } = req.params;
+      const userId = req.user.id;
     const wallet = await Wallet.findOne({ userId });
 
     if (!wallet) {
@@ -208,7 +208,7 @@ app.get("/wallet/:userId", async (req, res) => {
   }
 });
 
-app.post("/add", async (req, res) => {
+app.post("/v1/wallet/add", async (req, res) => {
   try {
     const { userId, amount } = req.body;
 
@@ -234,7 +234,7 @@ app.post("/add", async (req, res) => {
 });
 
 
-app.post("/wallet/update", async (req, res) => {
+app.post("/v1/wallet/update", async (req, res) => {
   try {
     const { userId, amount, description } = req.body;
     const wallet = await Wallet.findOne({ userId });
@@ -257,7 +257,7 @@ app.post("/wallet/update", async (req, res) => {
 // ===============================
 
 
-app.post("/create-contests", async (req, res) => {
+app.post("/v1/create-contests", async (req, res) => {
   try {
     const entryFees = [5, 10, 25, 50, 100, 200, 500];
     const contestsToCreate = entryFees.map(fee => ({
@@ -276,7 +276,7 @@ app.post("/create-contests", async (req, res) => {
 
 
 
-app.post("/create-defaults", async (req, res) => {
+app.post("/v1/create-defaults", async (req, res) => {
 const contests = [
   { entryFee: 5, prize: 8.1 },
   { entryFee: 10, prize: 16.2 },
@@ -304,7 +304,7 @@ const contests = [
 
 
 // ✅ Join contest (deduct fee, add player)
-app.post("/join", authenticateToken, async (req, res) => {
+app.post("/v1/join", authenticateToken, async (req, res) => {
   const { contestId } = req.body;
   const userId = req.user.id;
 
@@ -351,7 +351,7 @@ app.post("/join", authenticateToken, async (req, res) => {
 });
 
 
-app.get("/get-contests", async (req, res) => {
+app.get("/v1/get-contests", async (req, res) => {
   try {
     const contests = await Contest.find({
       isCompleted: false,
@@ -364,30 +364,8 @@ app.get("/get-contests", async (req, res) => {
 });
 
 
-
-
-//Contest get user 
-app.get("/contest/:contestId/players", async (req, res) => {
-  const { contestId } = req.params;
-
-  try {
-    const contest = await Contest.findById(contestId);
-
-    if (!contest) {
-      return res.status(404).json({ message: "Contest not found" });
-    }
-
-    // Return only players list
-    res.json({ players: contest.players });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-
-
 // ✅ Get specific contest
-app.get("/contest/:id", async (req, res) => {
+app.get("/v1/contest/:id", async (req, res) => {
   try {
     const contest = await Contest.findById(req.params.id).populate("players.userId");
     if (!contest) return res.status(404).json({ message: "Contest not found" });
@@ -411,24 +389,9 @@ app.get("/contest/:id", async (req, res) => {
   }
 });
 
-// ✅ Start contest when 2 players joined
-app.post("/start/:id", async (req, res) => {
-  try {
-    const contest = await Contest.findById(req.params.id);
-    if (contest.players.length === 2) {
-      // Logic to start quiz (emit via socket.io or status flag)
-      res.json({ message: "Contest started" });
-    } else {
-      res.status(400).json({ message: "Need 2 players to start" });
-    }
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
 
-
-app.post("/question", authenticateToken, async (req, res) => {
+app.post("/v1/question", authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id; 
 
@@ -462,7 +425,7 @@ app.post("/question", authenticateToken, async (req, res) => {
 
 
 // ✅ Submit answer (update score)
-app.post("/submit-answer", authenticateToken, async (req, res) => {
+app.post("/v1/submit-answer", authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
     const { questionId, contestId, selectedAnswer } = req.body;
@@ -499,57 +462,30 @@ app.post("/submit-answer", authenticateToken, async (req, res) => {
   }
 });
 
-// ✅ End contest and set winner
-app.post("/end/:id", async (req, res) => {
+app.post("/v1/contest/complete/:id", async (req, res) => {
   try {
     const contest = await Contest.findById(req.params.id);
     if (!contest) return res.status(404).json({ message: "Contest not found" });
 
+    // Sort players by score
     const sorted = contest.players.sort((a, b) => b.score - a.score);
+    if (sorted.length === 0) return res.status(400).json({ message: "No players in contest" });
 
     // Set the winner
-    contest.winnerId = sorted[0].userId;
+    const winner = sorted[0];
+    contest.winnerId = winner.userId;
     contest.isCompleted = true;
-
     await contest.save();
 
-    res.json({
-      message: "Contest ended",
-      winner: {
-        userId: sorted[0].userId,
-        fullName: sorted[0].fullName,
-        score: sorted[0].score
-      },
-      loser: sorted[1]
-        ? {
-            userId: sorted[1].userId,
-            fullName: sorted[1].fullName,
-            score: sorted[1].score
-          }
-        : null
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-
-// ✅ Distribute prize
-
-app.post("/distribute/:id", async (req, res) => {
-  try {
-    const contest = await Contest.findById(req.params.id).populate("winnerId", "fullName email");
-    if (!contest || !contest.winnerId) {
-      return res.status(400).json({ message: "Winner not decided yet" });
-    }
-
-    const winnerWallet = await Wallet.findOne({ userId: contest.winnerId._id });
+    // Get wallets
+    const winnerWallet = await Wallet.findOne({ userId: winner.userId });
     const ownerWallet = await Wallet.findOne({ userId: OWNER_USER_ID });
 
     if (!winnerWallet || !ownerWallet) {
       return res.status(404).json({ message: "Wallets not found" });
     }
 
+    // Prize Distribution
     const winnerPrize = Math.floor(contest.prize * 0.81);
     const ownerShare = contest.prize - winnerPrize;
 
@@ -560,19 +496,28 @@ app.post("/distribute/:id", async (req, res) => {
     await ownerWallet.save();
 
     res.json({
-      message: "Prize distributed",
-      prize: contest.prize,
-      winnerShare: winnerPrize,
-      ownerShare: ownerShare,
+      message: "Contest ended and prize distributed",
       winner: {
-        id: contest.winnerId._id,
-        fullName: contest.winnerId.fullName,
-        email: contest.winnerId.email,
+        userId: winner.userId,
+        fullName: winner.fullName,
+        score: winner.score,
         updatedWalletBalance: winnerWallet.balance
       },
-      owner: {
-        userId: OWNER_USER_ID,
-        updatedWalletBalance: ownerWallet.balance
+      loser: sorted[1]
+        ? {
+            userId: sorted[1].userId,
+            fullName: sorted[1].fullName,
+            score: sorted[1].score
+          }
+        : null,
+      prizeDetails: {
+        totalPrize: contest.prize,
+        winnerShare: winnerPrize,
+        ownerShare: ownerShare,
+        owner: {
+          userId: OWNER_USER_ID,
+          updatedWalletBalance: ownerWallet.balance
+        }
       }
     });
   } catch (err) {
@@ -587,13 +532,12 @@ app.post("/distribute/:id", async (req, res) => {
 
 
 
-
 // ===============================
 // 💸 LeaderBoard Routes
 // ===============================
 
 // ✅ Get leaderboard
-app.get("/leaderboard/:contestId", async (req, res) => {
+app.get("/v1/leaderboard/:contestId", async (req, res) => {
   try {
     const contest = await Contest.findById(req.params.contestId).populate("players.userId");
     const sorted = contest.players.sort((a, b) => b.score - a.score);
@@ -611,7 +555,7 @@ app.get("/leaderboard/:contestId", async (req, res) => {
 // 💸 Withdraw Routes
 // ===============================
 
-app.post("/withdraw",authenticateToken, async (req, res) => {
+app.post("/v1/withdraw",authenticateToken, async (req, res) => {
   try {
     const { amount } = req.body;
     const userId = req.user.id;

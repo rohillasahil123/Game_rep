@@ -1,9 +1,17 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Menu, X } from "lucide-react"; // For icons, optional
+import { Menu, X, Wallet } from "lucide-react";
+import useContestStore from "../../Store/useContestStore"
 
 const Header_Page = () => {
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const { walletBalance, getWalletBalance } = useContestStore();
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) getWalletBalance(token);
+  }, []);
 
   const navLinks = [
     { name: "Home", path: "/" },
@@ -20,7 +28,7 @@ const Header_Page = () => {
           PreMatchGlobal
         </Link>
 
-        {/* Desktop Nav */}
+        {/* Desktop Navigation */}
         <nav className="hidden md:flex space-x-6">
           {navLinks.map((link) => (
             <Link
@@ -31,9 +39,17 @@ const Header_Page = () => {
               {link.name}
             </Link>
           ))}
+          {/* ✅ Wallet on Desktop */}
+          <Link
+            to="/wallet"
+            className="text-gray-700 hover:text-blue-600 font-medium flex items-center gap-2"
+          >
+            <Wallet size={18} />
+            ₹{walletBalance !== null ? walletBalance : "--"}
+          </Link>
         </nav>
 
-        {/* Buttons */}
+        {/* Desktop Auth Buttons */}
         <div className="hidden md:flex space-x-3">
           <Link
             to="/login"
@@ -49,18 +65,24 @@ const Header_Page = () => {
           </Link>
         </div>
 
-        {/* Mobile menu toggle */}
-        <button
-          className="md:hidden"
-          onClick={() => setMenuOpen((prev) => !prev)}
-        >
-          {menuOpen ? <X size={28} /> : <Menu size={28} />}
-        </button>
+        {/* Mobile Wallet + Hamburger */}
+        <div className="md:hidden flex items-center gap-4">
+          <Link
+            to="/wallet"
+            className="text-blue-600 flex items-center gap-1 font-medium"
+          >
+            <Wallet size={22} />
+            ₹{walletBalance !== null ? walletBalance : "--"}
+          </Link>
+          <button onClick={() => setMenuOpen((prev) => !prev)}>
+            {menuOpen ? <X size={28} /> : <Menu size={28} />}
+          </button>
+        </div>
       </div>
 
-      {/* Mobile Menu */}
+      {/* Mobile Dropdown Menu */}
       {menuOpen && (
-        <div className="md:hidden px-4 pb-4 space-y-2 bg-white shadow">
+        <div className="md:hidden px-4 pb-4 space-y-3 bg-white shadow">
           {navLinks.map((link) => (
             <Link
               key={link.name}
@@ -71,6 +93,7 @@ const Header_Page = () => {
               {link.name}
             </Link>
           ))}
+          {/* Auth Buttons */}
           <div className="pt-3 flex flex-col space-y-2">
             <Link
               to="/login"

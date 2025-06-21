@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import useContestStore from "../../Store/useContestStore"
+import useContestStore from "../../Store/useContestStore";
+ const Api_URL = import.meta.env.BASE_URL
 
 const TOTAL_QUESTIONS = 10;
 
 const Quiz = () => {
   const navigate = useNavigate();
-  const { joinResult } = useContestStore(); // ✅ Zustand
+  const { joinResult, completeContest, completeResult } = useContestStore();
   const contestId = joinResult?.contest?._id;
 
   const [questions, setQuestions] = useState([]);
@@ -25,7 +26,7 @@ const Quiz = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
-      const res = await axios.post("http://localhost:5000/question", {}, {
+      const res = await axios.post(`${Api_URL}/question`, {}, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.data?.question) {
@@ -41,7 +42,7 @@ const Quiz = () => {
   const submitAnswer = async (questionId, selectedAnswer) => {
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.post("http://localhost:5000/submit-answer", {
+      const res = await axios.post(`${Api_URL}/submit-answer`, {
         questionId,
         contestId,
         selectedAnswer
@@ -95,10 +96,18 @@ const Quiz = () => {
         setTimer(5);
         await fetchQuestion();
       } else {
-        setLeaderboard([{ name: "You", score, status: "Completed" }]);
+        setLeaderboard("show");
       }
     }, 1500);
   };
+
+  // ✅ Call completeContest API when quiz ends
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (leaderboard === "show" && contestId) {
+      completeContest(contestId, token);
+    }
+  }, [leaderboard]);
 
   if (!contestId) {
     return (
@@ -116,11 +125,16 @@ const Quiz = () => {
     );
   }
 
-  if (leaderboard) {
+  // ✅ Show final result if completeResult is available
+  if (leaderboard === "show" && completeResult) {
+    const winner = completeResult.winner;
+    const loser = completeResult.loser;
+
     return (
       <div className="max-w-xl mx-auto mt-10 bg-white p-6 rounded-xl shadow">
-        <h2 className="text-2xl font-bold mb-4 text-green-600 text-center">🏆 Final Result</h2>
-        <table className="w-full text-left border">
+        <h2 className="text-2xl font-bold mb-4 text-green-600 text-center">🏆 Final Leaderboard</h2>
+
+        <table className="w-full text-left border mb-6">
           <thead>
             <tr className="bg-gray-100 text-gray-700">
               <th className="p-2">Player</th>
@@ -129,16 +143,22 @@ const Quiz = () => {
             </tr>
           </thead>
           <tbody>
-            {leaderboard.map((player, i) => (
-              <tr key={i} className="border-t">
-                <td className="p-2">{player.name}</td>
-                <td className="p-2">{player.score}</td>
-                <td className="p-2 font-semibold text-blue-700">{player.status}</td>
+            <tr className="border-t bg-green-50 font-semibold text-green-700">
+              <td className="p-2">{winner.fullName}</td>
+              <td className="p-2">{winner.score}</td>
+              <td className="p-2">Winner 🥇</td>
+            </tr>
+            {loser && (
+              <tr className="border-t bg-red-50 font-semibold text-red-700">
+                <td className="p-2">{loser.fullName}</td>
+                <td className="p-2">{loser.score}</td>
+                <td className="p-2">Loser</td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
-        <div className="text-center mt-4">
+
+        <div className="text-center">
           <button
             className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
             onClick={() => navigate("/")}

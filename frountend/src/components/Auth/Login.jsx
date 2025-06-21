@@ -4,6 +4,7 @@ import { FcGoogle } from "react-icons/fc";
 import { AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai";
 import axios from "axios";
 import toast from "react-hot-toast";
+ const Api_URL = import.meta.env.BASE_URL
 
 const Login = () => {
   const [activeTab, setActiveTab] = useState("phone");
@@ -22,7 +23,7 @@ const Login = () => {
           ? { phone: form.phone, password: form.password }
           : { email: form.email, password: form.password };
 
-      const response = await axios.post("http://localhost:5000/login", payload);
+      const response = await axios.post(`${Api_URL}/login`, payload);
            if (response.status === 200) {
     localStorage.setItem("token", response.data.token); 
          navigate("/"); 
