@@ -19,6 +19,8 @@ const Wallet = require("./Models/Wallet_Model");
 const Quiz = require("./Models/QuizContest")
 const WithdrawRequest = require("./Models/WithdrawRequest");
 const Contest = require("./Models/Contest_Model")
+const FlappyContest = require("./Models/FlapyBird_model.js")
+
 
 //✅ Middleware
 const authenticateToken = require("./middleware/Authantication");
@@ -576,6 +578,122 @@ app.get("/history",authenticateToken, async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+
+
+// ===============================
+// 🧼 Flappy Birds
+// ===============================
+
+
+//  Contest flapy birds
+
+app.post("/v1/create/bird", async (req, res) => {
+const contests = [
+  { entryFee: 5, prize: 8.1 },
+  { entryFee: 10, prize: 16.2 },
+  { entryFee: 25, prize: 40.5 },
+  { entryFee: 50, prize: 81 },
+  { entryFee: 100, prize: 162 },
+  { entryFee: 200, prize: 324 },
+  { entryFee: 500, prize: 810 },
+];
+
+
+  try {
+    await FlappyContest.insertMany(contests);
+    res.status(201).json({ message: "Contests created successfully" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+
+// ✅ Get All Flappy Contests
+app.get("/flappy/contests", async (req, res) => {
+  try {
+    const contests = await FlappyContest.find({}, { roomId: 1, entryFee: 1, prize: 1 }).sort({ entryFee: 1 });
+    res.json({ success: true, contests });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// routes/flappyRoutes.js
+app.post("/flappy/join", async (req, res) => {
+  const { userId, roomId, fullname } = req.body;
+  const entryFee = parseInt(roomId);
+
+  const wallet = await Wallet.findOne({ userId });
+  if (!wallet || wallet.balance < entryFee) {
+    return res.status(400).json({ success: false, message: "Insufficient balance" });
+  }
+
+  wallet.balance -= entryFee;
+  wallet.transactions.push({
+    type: "debit",
+    amount: entryFee,
+    description: `Joined Flappy ₹${entryFee} game`,
+  });
+  await wallet.save();
+
+  await FlappyContest.findOneAndUpdate(
+    { roomId },
+    { $push: { players: { userId, fullname } } },
+    { upsert: true, new: true }
+  );
+
+  res.json({ success: true, message: "Joined Flappy Game" });
+});
+
+
+
+
+
+// GET /api/flappy/leaderboard
+
+app.get("/flappy/leaderboard", async (req, res) => {
+  const top = await FlappyContest.aggregate([
+    { $unwind: "$players" },
+    { $match: { "players.isWinner": true } },
+    {
+      $group: {
+        _id: "$players.fullname",
+        totalWins: { $sum: 1 },
+        totalScore: { $sum: "$players.score" },
+      },
+    },
+    { $sort: { totalWins: -1, totalScore: -1 } },
+    { $limit: 10 },
+  ]);
+
+  res.json(top);
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//  ==============================
+//      Admin Api 
+//  ==============================
+
+app.get("/flappy/all", async (req, res) => {
+  const contests = await FlappyContest.find().sort({ createdAt: -1 });
+  res.json(contests);
+});
+
+
+
 
 // ===============================
 // 🧼 Error Middleware

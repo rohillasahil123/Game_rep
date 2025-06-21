@@ -1,6 +1,8 @@
 let io;
-const roomUsers = {};
-const finishedPlayers = {}; 
+const quizRoomUsers = {};
+const quizFinishedPlayers = {};
+const flappyRoomUsers = {};
+const flappyFinishedPlayers = {};
 
 const Wallet = require("./Models/Wallet_Model");
 
@@ -11,49 +13,41 @@ function initializeSocket(server) {
   });
 
   io.on("connection", (socket) => {
-    console.log("✅ A user connected:", socket.id);
+    console.log("✅ Socket connected:", socket.id);
 
-    // ✅ Join Quiz Room
+    //////////////////// ✅ QUIZ GAME ////////////////////
+
     socket.on("joinQuiz", ({ roomId, fullname, userId }) => {
-      console.log("📥 joinQuiz called with:", { roomId, fullname, userId });
+      if (!quizRoomUsers[roomId]) quizRoomUsers[roomId] = [];
 
-      if (!roomUsers[roomId]) roomUsers[roomId] = [];
-
-      // Already full
-      if (roomUsers[roomId].length >= 2) {
-        console.log("❌ Room full:", roomId);
-        socket.emit("roomFull", { message: "Room is already full." });
+      if (quizRoomUsers[roomId].length >= 2) {
+        socket.emit("roomFull", { message: "Room is full" });
         return;
       }
 
       socket.join(roomId);
-      roomUsers[roomId].push({ socketId: socket.id, fullname, userId });
+      quizRoomUsers[roomId].push({ socketId: socket.id, fullname, userId });
 
-      console.log(`✅ ${fullname} joined room ${roomId}`);
-      console.log("👥 Current room users:", roomUsers[roomId]);
-
-      io.to(roomId).emit("playerJoined", { players: roomUsers[roomId] });
+      io.to(roomId).emit("playerJoined", {
+        players: quizRoomUsers[roomId],
+      });
     });
 
-    // ✅ Player finishes the game
     socket.on("gameFinished", async ({ roomId, score }) => {
-      const user = roomUsers[roomId]?.find(u => u.socketId === socket.id);
+      const user = quizRoomUsers[roomId]?.find(u => u.socketId === socket.id);
       if (!user) return;
 
-      console.log(`🏁 ${user.fullname} finished game with score: ${score}`);
+      if (!quizFinishedPlayers[roomId]) quizFinishedPlayers[roomId] = [];
+      quizFinishedPlayers[roomId].push({ ...user, score });
 
-      if (!finishedPlayers[roomId]) finishedPlayers[roomId] = [];
-      finishedPlayers[roomId].push({ ...user, score });
-
-      // Wait until both players finish
-      if (finishedPlayers[roomId].length === 2) {
-        const [p1, p2] = finishedPlayers[roomId];
-        let result = { winner: null, loser: null, draw: false };
-
-        const entryFee = parseInt(roomId); // RoomId used as fee
+      if (quizFinishedPlayers[roomId].length === 2) {
+        const [p1, p2] = quizFinishedPlayers[roomId];
+        const entryFee = parseInt(roomId);
         const totalPrize = entryFee * 2;
         const winnerPrize = Math.floor(totalPrize * 0.82);
         const systemCut = totalPrize - winnerPrize;
+
+        let result = { winner: null, loser: null, draw: false };
 
         if (p1.score > p2.score) {
           result.winner = p1;
@@ -82,7 +76,6 @@ function initializeSocket(server) {
                 }
               );
             }
-            console.log("↩️ Match draw: Refund issued to both players");
           } else {
             await Wallet.findOneAndUpdate(
               { userId: result.winner.userId },
@@ -110,46 +103,151 @@ function initializeSocket(server) {
                 },
               }
             );
-
-            console.log(`🏆 ${result.winner.fullname} won ₹${winnerPrize}`);
           }
         } catch (err) {
-          console.error("❌ Wallet update error:", err.message);
+          console.error("❌ Wallet update error (quiz):", err.message);
         }
 
         io.to(roomId).emit("gameResult", {
           ...result,
-          players: finishedPlayers[roomId],
+          players: quizFinishedPlayers[roomId],
           winnerPrize,
           systemCut,
         });
 
-        // Clean up
-        delete finishedPlayers[roomId];
+        delete quizFinishedPlayers[roomId];
       }
     });
 
-    // ✅ Handle Disconnection
-    socket.on("disconnect", () => {
-      console.log("❌ User disconnected:", socket.id);
+    //////////////////// ✅ FLAPPY BIRD GAME ////////////////////
 
-      for (const roomId in roomUsers) {
-        const prevLength = roomUsers[roomId].length;
-        roomUsers[roomId] = roomUsers[roomId].filter(
-          (user) => user.socketId !== socket.id
-        );
+    socket.on("joinFlappy", ({ roomId, fullname, userId }) => {
+      if (!flappyRoomUsers[roomId]) flappyRoomUsers[roomId] = [];
 
-        if (prevLength !== roomUsers[roomId].length) {
-          io.to(roomId).emit("playerLeft", {
-            players: roomUsers[roomId],
-          });
+      if (flappyRoomUsers[roomId].length >= 2) {
+        socket.emit("roomFull", { message: "Room full." });
+        return;
+      }
 
-          if (roomUsers[roomId].length === 0) {
-            delete roomUsers[roomId];
-            delete finishedPlayers[roomId];
-            console.log(`🧹 Cleaned up empty room: ${roomId}`);
-          }
+      socket.join(roomId);
+      flappyRoomUsers[roomId].push({ socketId: socket.id, fullname, userId });
+
+      if (flappyRoomUsers[roomId].length === 2) {
+        io.to(roomId).emit("startFlappyGame");
+      }
+    });
+
+    socket.on("flappyOver", async ({ roomId, score }) => {
+      const user = flappyRoomUsers[roomId]?.find(u => u.socketId === socket.id);
+      if (!user) return;
+
+      if (!flappyFinishedPlayers[roomId]) flappyFinishedPlayers[roomId] = [];
+      flappyFinishedPlayers[roomId].push({ ...user, score });
+
+      if (flappyFinishedPlayers[roomId].length === 2) {
+        const [p1, p2] = flappyFinishedPlayers[roomId];
+        const entryFee = parseInt(roomId);
+        const totalPrize = entryFee * 2;
+        const winnerPrize = Math.floor(totalPrize * 0.82);
+        const systemCut = totalPrize - winnerPrize;
+
+        let result = { winner: null, loser: null, draw: false };
+
+        if (p1.score > p2.score) {
+          result.winner = p1;
+          result.loser = p2;
+        } else if (p2.score > p1.score) {
+          result.winner = p2;
+          result.loser = p1;
+        } else {
+          result.draw = true;
         }
+
+        try {
+          if (result.draw) {
+            for (const player of [p1, p2]) {
+              await Wallet.findOneAndUpdate(
+                { userId: player.userId },
+                {
+                  $inc: { balance: entryFee },
+                  $push: {
+                    transactions: {
+                      type: "credit",
+                      amount: entryFee,
+                      description: `Refund for draw in Flappy ₹${entryFee} room`,
+                    },
+                  },
+                }
+              );
+            }
+          } else {
+            await Wallet.findOneAndUpdate(
+              { userId: result.winner.userId },
+              {
+                $inc: { balance: winnerPrize },
+                $push: {
+                  transactions: {
+                    type: "credit",
+                    amount: winnerPrize,
+                    description: `Won ₹${winnerPrize} in Flappy ₹${entryFee} room`,
+                  },
+                },
+              }
+            );
+
+            await Wallet.findOneAndUpdate(
+              { userId: result.loser.userId },
+              {
+                $push: {
+                  transactions: {
+                    type: "debit",
+                    amount: entryFee,
+                    description: `Lost ₹${entryFee} in Flappy ₹${entryFee} room`,
+                  },
+                },
+              }
+            );
+            await FlappyContest.updateOne(
+              { roomId, "players.userId": result.winner?.userId },
+              { $set: { "players.$.score": result.winner?.score, "players.$.isWinner": true } }
+            );
+
+            await FlappyContest.updateOne(
+              { roomId, "players.userId": result.loser?.userId },
+              { $set: { "players.$.score": result.loser?.score, "players.$.isWinner": false } }
+            );
+          }
+        } catch (err) {
+          console.error("❌ Wallet update error (flappy):", err.message);
+        }
+
+        io.to(roomId).emit("flappyResult", {
+          ...result,
+          players: flappyFinishedPlayers[roomId],
+          winnerPrize,
+          systemCut,
+        });
+
+        delete flappyFinishedPlayers[roomId];
+        delete flappyRoomUsers[roomId];
+      }
+    });
+
+    //////////////////// ✅ DISCONNECT ////////////////////
+
+    socket.on("disconnect", () => {
+      console.log("❌ Disconnected:", socket.id);
+
+      for (const roomId in quizRoomUsers) {
+        quizRoomUsers[roomId] = quizRoomUsers[roomId].filter(u => u.socketId !== socket.id);
+        if (quizRoomUsers[roomId].length === 0) delete quizRoomUsers[roomId];
+        delete quizFinishedPlayers[roomId];
+      }
+
+      for (const roomId in flappyRoomUsers) {
+        flappyRoomUsers[roomId] = flappyRoomUsers[roomId].filter(u => u.socketId !== socket.id);
+        if (flappyRoomUsers[roomId].length === 0) delete flappyRoomUsers[roomId];
+        delete flappyFinishedPlayers[roomId];
       }
     });
   });

@@ -15,7 +15,7 @@ const Home_page = () => {
   { name: 'Puzzle Game', desc: 'Solve puzzles & win prizes', route: '/puzzle' },
   { name: 'Tap-to-Win', desc: 'Tap fast, score high, earn', route: '/tap-to-win' },
   { name: 'Memory Match', desc: 'Match cards & get rewards', route: '/memory-match' },
-  { name: 'Flappy Jump', desc: 'Score high & top leaderboard', route: '/flappy-jump' },
+  { name: 'Flappy Jump', desc: 'Score high & top leaderboard', route: '/bird' },
 ];
 
 
