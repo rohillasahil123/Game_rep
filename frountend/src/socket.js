@@ -4,11 +4,12 @@ let socket = null;
 
 // ✅ Initialize Socket
 export const initializeSocket = (token) => {
- socket = io("https://foodenergy.shop", {
-    transports: ["websocket"],     
-    withCredentials: true,         
-    auth: { token },              
-  });
+const socket = io("https://foodenergy.shop", {
+  transports: ["websocket"],
+  auth: { token },
+  withCredentials: true,
+});
+
 
   socket.on("connect", () => {
     console.log("✅ Connected:", socket.id);
