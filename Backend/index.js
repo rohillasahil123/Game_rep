@@ -29,7 +29,9 @@ require("./config/db");
 //✅ Initialize
 dotenv.config();
 const app = express();
+
 const server = http.createServer(app);
+
 app.use(cors({
   origin: ['https://foodenergy.shop', 'https://www.foodenergy.shop' , 'http://localhost:5173/'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
