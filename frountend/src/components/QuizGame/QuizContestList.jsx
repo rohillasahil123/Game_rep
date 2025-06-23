@@ -5,7 +5,8 @@ import useContestStore from "../../Store/useContestStore";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
-const Api_URL = import.meta.env.VITE_BASE_URL;
+
+const Api_URL = "https://foodenergy.shop"
 
 const QuizContestList = () => {
   const [contests, setContests] = useState([]);

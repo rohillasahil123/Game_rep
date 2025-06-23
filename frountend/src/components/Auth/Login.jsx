@@ -4,7 +4,7 @@ import { FcGoogle } from "react-icons/fc";
 import { AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai";
 import axios from "axios";
 import toast from "react-hot-toast";
-const Api_URL = import.meta.env.VITE_BASE_URL;
+const Api_URL = "https://foodenergy.shop"
 
 
 const Login = () => {
@@ -24,7 +24,7 @@ const Login = () => {
           ? { phone: form.phone, password: form.password }
           : { email: form.email, password: form.password };
 
-      const response = await axios.post(`${Api_URL}/login`, payload);
+      const response = await axios.post(`${Api_URL}/v1/login`, payload);
            if (response.status === 200) {
     localStorage.setItem("token", response.data.token); 
          navigate("/"); 

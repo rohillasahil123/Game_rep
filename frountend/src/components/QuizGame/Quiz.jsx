@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import useContestStore from "../../Store/useContestStore";
-const Api_URL = import.meta.env.VITE_BASE_URL;
+const Api_URL = "https://foodenergy.shop"
 
 
 const TOTAL_QUESTIONS = 10;
@@ -27,7 +27,7 @@ const Quiz = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
-      const res = await axios.post(`${Api_URL}/question`, {}, {
+      const res = await axios.post(`${Api_URL}/v1/question`, {}, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.data?.question) {
@@ -43,7 +43,7 @@ const Quiz = () => {
   const submitAnswer = async (questionId, selectedAnswer) => {
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.post(`${Api_URL}/submit-answer`, {
+      const res = await axios.post(`${Api_URL}/v1/submit-answer`, {
         questionId,
         contestId,
         selectedAnswer
