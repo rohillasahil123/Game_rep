@@ -6,7 +6,7 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 
-const Api_URL = import.meta.env.VITE_BASE_URL;
+const Api_URL = "https://foodenergy.shop"
 
 const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
