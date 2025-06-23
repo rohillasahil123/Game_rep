@@ -13,6 +13,7 @@ import GameResultBanner from './components/QuizGame/GameResultBanner'
 import QuizLeaderboard from './components/QuizGame/QuizLeaderboard'
 import { initializeSocket } from "./socket";
 import FlappyPlay from './components/Flip_Birds/FlappyPlay'
+import BirdContestList from './components/Flip_Birds/BirdContestList'
 
 
 const App = () => {
@@ -40,6 +41,7 @@ const App = () => {
            <Route   path='/quiz/join/win' element={ <GameResultBanner/>} ></Route>
             <Route   path='/quiz/leaderboard' element={ <QuizLeaderboard/>} ></Route>
             <Route path='/bird' element={<FlappyPlay/>} ></Route>
+            <Route path='/bird/list' element={<BirdContestList/>} ></Route>
     </Routes>
     
   </>    

@@ -30,7 +30,11 @@ require("./config/db");
 dotenv.config();
 const app = express();
 const server = http.createServer(app);
-app.use(cors());
+app.use(cors({
+  origin: ['https://foodenergy.shop', 'https://www.foodenergy.shop' , 'http://localhost:5173/'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  credentials: true,
+}));
 app.use(express.json());
 app.use(morgan("dev"));
 
@@ -610,7 +614,7 @@ const contests = [
 
 
 // ✅ Get All Flappy Contests
-app.get("/flappy/contests", async (req, res) => {
+app.get("/v1/flappy/contests", async (req, res) => {
   try {
     const contests = await FlappyContest.find({}, { roomId: 1, entryFee: 1, prize: 1 }).sort({ entryFee: 1 });
     res.json({ success: true, contests });
