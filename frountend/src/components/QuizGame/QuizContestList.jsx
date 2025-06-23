@@ -19,10 +19,9 @@ const QuizContestList = () => {
     const fetchContests = async () => {
       try {
         const response = await axios.get("https://foodenergy.shop/v1/get-contests");
-        
-
         setContests(response.data.contests);
       } catch (error) {
+        console.log(error)
         console.error("Error fetching contests:", error);
         toast.error("Failed to fetch contests");
       }

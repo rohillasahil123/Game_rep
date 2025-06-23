@@ -1,9 +1,16 @@
 // src/pages/Homepage.jsx
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
 const Home_page = () => {
   const navigate = useNavigate()
+
+
+
+  useEffect(()=>{
+    const response = axios.get("https://foodenergy.shop/v1/")
+    console.log(response , "free")
+  } , [])
 
  const GameData = [
   { name: 'Quiz Game', desc: 'Answer questions & earn rewards', route: '/quiz' },
