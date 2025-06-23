@@ -11,42 +11,40 @@ import QuizContestJoinBanner from './components/QuizGame/QuizContestJoinBanner'
 import QuizContestList from './components/QuizGame/QuizContestList'
 import GameResultBanner from './components/QuizGame/GameResultBanner'
 import QuizLeaderboard from './components/QuizGame/QuizLeaderboard'
-import { initializeSocket } from "./socket";
+import { initializeSocket } from "./socket"
 import FlappyPlay from './components/Flip_Birds/FlappyPlay'
 import BirdContestList from './components/Flip_Birds/BirdContestList'
-
+import PrivateRoute from './components/PrivateRoute'  // ✅ import
 
 const App = () => {
+  useEffect(() => {
+    const socket = initializeSocket();
+    console.log("Socket initialized")
+  }, []);
 
-
-   useEffect(() => {
-  const socket = initializeSocket(); // call once
-  console.log("56") 
-}, []);
   return (
-  <>
+    <>
+      <Header_Page />
+      <Routes>
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/" element={<Home_page />} />
 
-
- 
-  <Header_Page/>
-    <Routes>
-    <Route path='/signup'  element={<Signup/>}  /> 
-       <Route path='/login'  element={<Login/>}  /> 
-       <Route  path='/' element={<Home_page/>} />
-       <Route path='/cricket' element={<CricketDashboard/>} />
-       <Route path='/quiz' element={ <QuizSelection/> } ></Route>
-       <Route path='/quiz/question' element={<Quiz/>} />
-       <Route   path='/quiz/banner' element={<QuizContestJoinBanner/>} ></Route>
-       <Route   path='/quiz/list' element={ <QuizContestList/>} ></Route>
-           <Route   path='/quiz/join/win' element={ <GameResultBanner/>} ></Route>
-            <Route   path='/quiz/leaderboard' element={ <QuizLeaderboard/>} ></Route>
-            <Route path='/bird' element={<FlappyPlay/>} ></Route>
-            <Route path='/bird/list' element={<BirdContestList/>} ></Route>
-    </Routes>
-    
-  </>    
+        {/* ✅ Protected Routes */}
+        <Route path="/cricket" element={<PrivateRoute><CricketDashboard /></PrivateRoute>} />
+        
+        <Route path="/quiz" element={<PrivateRoute><QuizSelection /></PrivateRoute>} />
+        <Route path="/quiz/question" element={<PrivateRoute><Quiz /></PrivateRoute>} />
+        <Route path="/quiz/banner" element={<PrivateRoute><QuizContestJoinBanner /></PrivateRoute>} />
+        <Route path="/quiz/list" element={<PrivateRoute><QuizContestList /></PrivateRoute>} />
+        <Route path="/quiz/join/win" element={<PrivateRoute><GameResultBanner /></PrivateRoute>} />
+        <Route path="/quiz/leaderboard" element={<PrivateRoute><QuizLeaderboard /></PrivateRoute>} />
+        
+        <Route path="/bird" element={<PrivateRoute><FlappyPlay /></PrivateRoute>} />
+        <Route path="/bird/list" element={<PrivateRoute><BirdContestList /></PrivateRoute>} />
+      </Routes>
+    </>
   )
 }
-
 
 export default App
