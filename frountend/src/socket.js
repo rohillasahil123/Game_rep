@@ -4,8 +4,10 @@ let socket = null;
 
 // ✅ Initialize Socket
 export const initializeSocket = (token) => {
-  socket = io("http://localhost:5000", {
-    auth: { token },
+ socket = io("https://foodenergy.shop", {
+    transports: ["websocket"],     
+    withCredentials: true,         
+    auth: { token },              
   });
 
   socket.on("connect", () => {

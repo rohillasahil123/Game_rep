@@ -35,7 +35,7 @@ const Signup = () => {
   const handleSignup = async () => {
     try {
       const { fullName, phone, email, password } = form;
-      const response = await axios.post(`${Api_URL}/signup`, {
+      const response = await axios.post(`${Api_URL}/v1/signup`, {
         fullName,
         phone,
         email,

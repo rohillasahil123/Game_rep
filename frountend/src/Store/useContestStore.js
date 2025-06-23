@@ -15,7 +15,7 @@ const useContestStore = create((set) => ({
     set({ loading: true, error: null, joinResult: null })
     try {
       const res = await axios.post(
-        `${Api_URL}/join`,
+        `${Api_URL}/v1/join`,
         { contestId },
         {
           headers: {
@@ -39,7 +39,7 @@ const useContestStore = create((set) => ({
   // ✅ Get Wallet Balance
   getWalletBalance: async (token) => {
     try {
-      const res = await axios.get(`${Api_URL}/wallet/user`, {
+      const res = await axios.get(`${Api_URL}/v1/wallet/user`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       set({ walletBalance: res.data.balance });
@@ -55,7 +55,7 @@ const useContestStore = create((set) => ({
     set({ loading: true, error: null, completeResult: null })
     try {
       const res = await axios.post(
-        `${Api_URL}/contest/complete/${contestId}`,
+        `${Api_URL}/v1/contest/complete/${contestId}`,
         {},
         {
           headers: {
