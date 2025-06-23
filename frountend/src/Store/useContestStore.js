@@ -1,6 +1,6 @@
   import { create } from 'zustand'
   import axios from 'axios'
-const Api_URL = import.meta.env.VITE_BASE_URL;
+const Api_URL = "https://foodenergy.shop"
 
 
 const useContestStore = create((set) => ({
