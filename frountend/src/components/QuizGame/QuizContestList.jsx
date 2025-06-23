@@ -18,7 +18,9 @@ const QuizContestList = () => {
   useEffect(() => {
     const fetchContests = async () => {
       try {
-        const response = await axios.get(`https://foodenergy.shop/v1/get-contests`);
+        const response = await axios.get("https://foodenergy.shop/v1/get-contests");
+        
+
         setContests(response.data.contests);
       } catch (error) {
         console.error("Error fetching contests:", error);
