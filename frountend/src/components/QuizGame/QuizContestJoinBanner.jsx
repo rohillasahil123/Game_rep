@@ -22,19 +22,19 @@ const QuizContestJoinBanner = () => {
     // ✅ Join room
     joinQuizRoom(contestId, fullName, userId);
 
-    // ✅ Listen for players in room
+    
     onPlayerJoined(({ players }) => {
       setPlayers(players);
     });
 
-    // ✅ Cleanup
+    
     return () => {
       const socket = getSocket();
       if (socket) socket.off("playerJoined");
     };
   }, [contestId, fullName, userId]);
 
-  // ✅ Start quiz 2s after both joined
+
   useEffect(() => {
     if (players.length === 2) {
       const timer = setTimeout(() => {

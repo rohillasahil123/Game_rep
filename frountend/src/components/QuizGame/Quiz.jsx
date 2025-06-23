@@ -2,7 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import useContestStore from "../../Store/useContestStore";
- const Api_URL = import.meta.env.BASE_URL
+const Api_URL = import.meta.env.VITE_BASE_URL;
+
 
 const TOTAL_QUESTIONS = 10;
 

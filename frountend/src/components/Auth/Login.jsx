@@ -4,7 +4,8 @@ import { FcGoogle } from "react-icons/fc";
 import { AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai";
 import axios from "axios";
 import toast from "react-hot-toast";
- const Api_URL = import.meta.env.BASE_URL
+const Api_URL = import.meta.env.VITE_BASE_URL;
+
 
 const Login = () => {
   const [activeTab, setActiveTab] = useState("phone");

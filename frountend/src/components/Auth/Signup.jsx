@@ -5,6 +5,8 @@ import { FaPlus } from "react-icons/fa";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
+const Api_URL = import.meta.env.VITE_BASE_URL;
+
 
 const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -33,7 +35,7 @@ const Signup = () => {
   const handleSignup = async () => {
     try {
       const { fullName, phone, email, password } = form;
-      const response = await axios.post("http://localhost:5000/signup", {
+      const response = await axios.post(`${Api_URL}/signup`, {
         fullName,
         phone,
         email,
