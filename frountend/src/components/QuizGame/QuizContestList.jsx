@@ -3,38 +3,47 @@ import axios from "axios";
 import { FaCrown, FaCoins } from "react-icons/fa";
 import useContestStore from "../../Store/useContestStore";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
+
 const Api_URL = import.meta.env.VITE_BASE_URL;
 
 const QuizContestList = () => {
   const [contests, setContests] = useState([]);
-  const [joiningContestId, setJoiningContestId] = useState(null); 
-  const { joinContest, loading, joinResult, error } = useContestStore();
-  const navigate = useNavigate()
+  const [joiningContestId, setJoiningContestId] = useState(null);
 
+  const { joinContest, loading, joinResult, error } = useContestStore();
+  const navigate = useNavigate();
+
+  // ✅ Fetch contests on load
   useEffect(() => {
     const fetchContests = async () => {
       try {
-        const response = await axios.get(`${Api_URL}/get-contests`);
+        const response = await axios.get(`${Api_URL}/v1/get-contests`);
         setContests(response.data.contests);
       } catch (error) {
         console.error("Error fetching contests:", error);
+        toast.error("Failed to fetch contests");
       }
     };
     fetchContests();
   }, []);
 
+  // ✅ Join contest handler
   const HandleJoinContest = async (contestId) => {
     try {
       const token = localStorage.getItem("token");
-      if (!token) return alert("Please login first");
+      if (!token) return toast.error("Please login first");
 
       setJoiningContestId(contestId);
       await joinContest(contestId, token);
-      setJoiningContestId(null); 
-navigate("/quiz/banner")
+      setJoiningContestId(null);
+
+      toast.success("Joined successfully!");
+      navigate("/quiz/banner");
     } catch (error) {
       console.error("Join error:", error);
-      setJoiningContestId(null); 
+      toast.error("Failed to join contest");
+      setJoiningContestId(null);
     }
   };
 

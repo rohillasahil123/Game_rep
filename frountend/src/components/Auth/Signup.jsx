@@ -5,8 +5,8 @@ import { FaPlus } from "react-icons/fa";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
-const Api_URL = import.meta.env.VITE_BASE_URL;
 
+const Api_URL = import.meta.env.VITE_BASE_URL;
 
 const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -19,7 +19,7 @@ const Signup = () => {
     password: "",
     promo: ""
   });
-  const navigate= useNavigate()
+  const navigate = useNavigate();
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -35,15 +35,17 @@ const Signup = () => {
   const handleSignup = async () => {
     try {
       const { fullName, phone, email, password } = form;
+
       const response = await axios.post(`${Api_URL}/v1/signup`, {
         fullName,
         phone,
         email,
         password,
       });
-      localStorage.setItem("fullName" , fullName)
+
+      localStorage.setItem("fullName", fullName);
       toast.success("Signup successful!");
-      navigate('/login')
+      navigate("/login");
     } catch (error) {
       console.error("Signup error:", error.response?.data || error.message);
       toast.error(error.response?.data?.message || "Signup failed!");
@@ -69,7 +71,6 @@ const Signup = () => {
           🎁 Choose Your Welcome Bonus
         </div>
 
-        {/* Full Name */}
         <input
           name="fullName"
           type="text"
@@ -79,7 +80,6 @@ const Signup = () => {
           className="w-full px-3 py-2 mb-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 outline-none"
         />
 
-        {/* Phone input */}
         <div className="relative mb-3">
           <span className="absolute left-3 top-2.5">🇮🇳</span>
           <input
@@ -92,7 +92,6 @@ const Signup = () => {
           />
         </div>
 
-        {/* Email input */}
         <input
           name="email"
           type="email"
@@ -102,7 +101,6 @@ const Signup = () => {
           className="w-full px-3 py-2 mb-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 outline-none"
         />
 
-        {/* Password Field */}
         <div className="relative mb-1">
           <input
             name="password"
@@ -121,7 +119,6 @@ const Signup = () => {
         </div>
         <p className="text-xs text-gray-400 mb-3 pl-1">• at least 4 characters</p>
 
-        {/* Promo Code Toggle */}
         <div
           className="flex items-center gap-2 text-green-600 font-medium cursor-pointer mb-3"
           onClick={() => setPromoVisible(!promoVisible)}
@@ -139,7 +136,6 @@ const Signup = () => {
           />
         )}
 
-        {/* Terms and Conditions */}
         <label className="flex items-start gap-2 mb-4 bg-gray-100 rounded-lg p-3 text-xs text-gray-700 cursor-pointer">
           <input
             type="checkbox"
@@ -148,15 +144,13 @@ const Signup = () => {
             className="mt-1"
           />
           <span>
-            By signing up, I hereby confirm that I am over 18, I read and accepted the{" "}
+            By signing up, I confirm that I am over 18 and I accept the{" "}
             <a href="#" className="text-green-600 underline">
-              offer agreements
-            </a>{" "}
-            for the chosen currency with the applicable terms and conditions
+              terms and conditions
+            </a>
           </span>
         </label>
 
-        {/* Sign Up Button */}
         <button
           disabled={!isFormValid}
           onClick={handleSignup}

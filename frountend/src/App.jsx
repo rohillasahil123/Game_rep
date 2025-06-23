@@ -15,6 +15,7 @@ import { initializeSocket } from "./socket"
 import FlappyPlay from './components/Flip_Birds/FlappyPlay'
 import BirdContestList from './components/Flip_Birds/BirdContestList'
 import PrivateRoute from './components/PrivateRoute'  // ✅ import
+import { Toaster } from 'react-hot-toast'
 
 const App = () => {
   useEffect(() => {
@@ -42,6 +43,7 @@ const App = () => {
         
         <Route path="/bird" element={<PrivateRoute><FlappyPlay /></PrivateRoute>} />
         <Route path="/bird/list" element={<PrivateRoute><BirdContestList /></PrivateRoute>} />
+        <Toaster/>
       </Routes>
     </>
   )
