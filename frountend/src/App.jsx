@@ -14,7 +14,7 @@ import QuizLeaderboard from './components/QuizGame/QuizLeaderboard'
 import { initializeSocket } from "./socket"
 import FlappyPlay from './components/Flip_Birds/FlappyPlay'
 import BirdContestList from './components/Flip_Birds/BirdContestList'
-import PrivateRoute from './components/PrivateRoute'  // ✅ import
+import PrivateRoute from './components/PrivateRoute' 
 import { Toaster } from 'react-hot-toast'
 
 const App = () => {
