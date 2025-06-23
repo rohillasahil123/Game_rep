@@ -17,7 +17,7 @@ const GameResultBanner = ({ winnerName = "Player 1", loserName = "Player 2" }) =
 
           <div className="text-2xl font-bold text-gray-500">VS</div>
 
-          {/* Loser Card */}
+          {/* Loser Card */}   
           <div className="flex-1 bg-red-50 border border-red-200 rounded-xl p-4 opacity-70">
             <FaSadTear className="text-red-400 text-3xl mx-auto mb-2" />
             <p className="text-lg font-semibold text-red-600">{loserName}</p>
