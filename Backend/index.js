@@ -23,9 +23,11 @@ const Contest = require("./Models/Contest_Model")
 const FlappyContest = require("./Models/FlapyBird_model.js")
 
 
+
 //✅ Middleware
 const authenticateToken = require("./middleware/Authantication");
 require("./config/db");
+const JWT_SECRET = "ShyamBabakiJai";
 
 //✅ Initialize
 dotenv.config();
@@ -108,7 +110,7 @@ app.post("/v1/login", async (req, res) => {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ id: user._id }, JWT_SECRET, {
       expiresIn: "7d"
     });
 
