@@ -27,7 +27,7 @@ const FlappyContest = require("./Models/FlapyBird_model.js")
 //✅ Middleware
 const authenticateToken = require("./middleware/Authantication");
 require("./config/db");
-const JWT_SECRET = "ShyamBabakiJai";
+const JWT_SECRET = "my_static_secret_key";
 
 //✅ Initialize
 dotenv.config();
@@ -110,27 +110,23 @@ app.post("/v1/login", async (req, res) => {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    const token = jwt.sign({ id: user._id }, JWT_SECRET, {
-      expiresIn: "7d"
-    });
+    const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: "7d" });
 
-    const wallet  = await Wallet.findOne({userId : user._id})
+    const wallet = await Wallet.findOne({ userId: user._id });
 
-    // Remove password before sending response
     const userWithoutPassword = user.toObject();
     delete userWithoutPassword.password;
 
     res.status(200).json({
       message: "Login successful",
       token,
-      user: userWithoutPassword ,
-      wallet
+      user: userWithoutPassword,
+      wallet,
     });
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 });
-
 
 
   
