@@ -16,6 +16,7 @@ import FlappyPlay from './components/Flip_Birds/FlappyPlay'
 import BirdContestList from './components/Flip_Birds/BirdContestList'
 import PrivateRoute from './components/Private/PrivateRoute'
 import { Toaster } from 'react-hot-toast'
+import Demo from './components/QuizGame/Demo'
 
 const App = () => {
   useEffect(() => {
@@ -30,6 +31,7 @@ const App = () => {
         <Route path="/signup" element={<Signup />} />
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<Home_page />} />
+        <Route  path='/demo' element={<Demo/>} >  </Route>
 
         {/* ✅ Protected Routes */}
         <Route path="/cricket" element={<PrivateRoute><CricketDashboard /></PrivateRoute>} />
