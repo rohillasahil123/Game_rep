@@ -7,11 +7,6 @@ const Home_page = () => {
 
 
 
-  useEffect(()=>{
-    const response = axios.get("https://foodenergy.shop/v1/")
-    console.log(response , "free")
-  } , [])
-
  const GameData = [
   { name: 'Quiz Game', desc: 'Answer questions & earn rewards', route: '/quiz' },
   { name: 'Color Trading', desc: 'Buy low, sell high & profit', route: '/color-trading' },
