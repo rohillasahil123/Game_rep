@@ -27,7 +27,7 @@ const FlappyContest = require("./Models/FlapyBird_model.js")
 //✅ Middleware
 const authenticateToken = require("./middleware/Authantication");
 require("./config/db");
-const JWT_SECRET = "my_static_secret_key";
+const JWT_SECRET = process.env.JWT_SECRET;
 
 //✅ Initialize
 dotenv.config();

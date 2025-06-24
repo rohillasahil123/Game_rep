@@ -4,7 +4,6 @@ import { FcGoogle } from "react-icons/fc";
 import { AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai";
 import axios from "axios";
 import toast from "react-hot-toast";
-const Api_URL = "https://foodenergy.shop"
 
 
 const Login = () => {
@@ -24,17 +23,16 @@ const Login = () => {
           ? { phone: form.phone, password: form.password }
           : { email: form.email, password: form.password };
 
-      const response = await axios.post(`${Api_URL}/v1/login`, payload);
-           if (response.status === 200) {
-    localStorage.setItem("token", response.data.token); 
-         navigate("/"); 
-         cl
-           toast.success("Login successful!");
-  }else{
-    console.log("error")
-  }
-      
-     
+      const response = await axios.post(`https://foodenergy.shop/v1/login`, payload);
+      if (response.status === 200) {
+        localStorage.setItem("token", response.data.token);
+        navigate("/")
+        toast.success("Login successful!");
+      } else {
+        console.log("error")
+      }
+
+
     } catch (error) {
       toast.error(error.response?.data?.message || "Login failed!");
     }
@@ -66,9 +64,8 @@ const Login = () => {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`flex-1 py-2 text-sm capitalize ${
-                activeTab === tab ? "bg-gray-100 font-semibold" : "bg-white"
-              }`}
+              className={`flex-1 py-2 text-sm capitalize ${activeTab === tab ? "bg-gray-100 font-semibold" : "bg-white"
+                }`}
             >
               {tab === "phone" ? "Phone number" : "E-mail"}
             </button>
@@ -126,11 +123,10 @@ const Login = () => {
         <button
           onClick={handleLogin}
           disabled={!isValid}
-          className={`w-full py-2 rounded-lg font-medium transition ${
-            isValid
+          className={`w-full py-2 rounded-lg font-medium transition ${isValid
               ? "bg-green-500 text-white hover:bg-green-600"
               : "bg-gray-200 text-gray-500 cursor-not-allowed"
-          }`}
+            }`}
         >
           Log in
         </button>
