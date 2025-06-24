@@ -27,11 +27,12 @@ const App = () => {
   return (
     <>
       <Header_Page />
+        <Toaster/>
       <Routes>
         <Route path="/signup" element={<Signup />} />
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<Home_page />} />
-        <Route  path='/demo' element={<Demo/>} >  </Route>
+        <Route  path='/demo' element={<Demo/>} ></Route>
 
         {/* ✅ Protected Routes */}
         <Route path="/cricket" element={<PrivateRoute><CricketDashboard /></PrivateRoute>} />
@@ -45,7 +46,7 @@ const App = () => {
         
         <Route path="/bird" element={<PrivateRoute><FlappyPlay /></PrivateRoute>} />
         <Route path="/bird/list" element={<PrivateRoute><BirdContestList /></PrivateRoute>} />
-        <Toaster/>
+      
       </Routes>
     </>
   )
