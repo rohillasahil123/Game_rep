@@ -1,5 +1,3 @@
-//✅ Required Modules
-require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -27,7 +25,7 @@ const FlappyContest = require("./Models/FlapyBird_model.js")
 //✅ Middleware
 const authenticateToken = require("./middleware/Authantication");
 require("./config/db");
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = "JaiBabaKi";
 
 //✅ Initialize
 dotenv.config();
@@ -110,7 +108,7 @@ app.post("/v1/login", async (req, res) => {
       return res.status(401).json({ message: "Invalid credentials" });
 
     }
-    console.log(JWT_SECRET , "secure")
+    console.log(JWT_SECRET , "secret")
 
     const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: "7d" });
 

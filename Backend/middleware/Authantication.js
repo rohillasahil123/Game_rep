@@ -1,7 +1,6 @@
 const jwt = require("jsonwebtoken");
 const User = require("../Models/User_Model");
-
-const JWT_SECRET = "my_static_secret_key"; 
+const JWT_SECRET = "JaiBabaKi"; 
 
 const authenticateToken = async (req, res, next) => {
   try {
