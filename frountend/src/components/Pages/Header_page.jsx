@@ -1,17 +1,34 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Menu, X, Wallet } from "lucide-react";
-import useContestStore from "../../Store/useContestStore"
+import axios from "axios";
+
 
 const Header_Page = () => {
   const [menuOpen, setMenuOpen] = useState(false);
+   const [walletBalance, setWalletBalance] = useState(null);
 
-  const { walletBalance, getWalletBalance } = useContestStore();
+useEffect(() => {
+  const fetchWalletBalance = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+      const response = await axios.get("https://foodenergy.shop/v1/wallet/0", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setWalletBalance(response.data.balance);
+      console.log(walletBalance , "free")
+    } catch (error) {
+      console.error("Failed to fetch wallet balance:", error);
+      setWalletBalance(null);
+    }
+  };
 
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) getWalletBalance(token);
-  }, []);
+  fetchWalletBalance();
+}, []);
+
 
   const navLinks = [
     { name: "Home", path: "/" },

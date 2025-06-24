@@ -14,7 +14,7 @@ const { initializeSocket } = require("./socket.js");
 const OWNER_USER_ID = "6852fdb44055b9fdd86ffdd4"; 
 
 
-//✅ Models
+//✅ Models 
 const User = require("./Models/User_Model");
 const Wallet = require("./Models/Wallet_Model");
 const Quiz = require("./Models/QuizContest")
@@ -29,7 +29,7 @@ const authenticateToken = require("./middleware/Authantication");
 require("./config/db");
 const JWT_SECRET = "JaiBabaKi";
 
-//✅ Initialize
+//✅ Initializej
 dotenv.config();
 const app = express();
 

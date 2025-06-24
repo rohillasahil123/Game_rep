@@ -1,4 +1,4 @@
-let io;
+const io = require("socket.io")(server, { cors: { origin: "*" } });
 const quizRoomUsers = {};
 const quizFinishedPlayers = {};
 const flappyRoomUsers = {};

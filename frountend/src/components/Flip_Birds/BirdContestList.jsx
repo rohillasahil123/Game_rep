@@ -3,7 +3,6 @@ import axios from "axios";
 import { FaCrown, FaCoins } from "react-icons/fa";
 import useContestStore from "../../Store/useContestStore";
 import { useNavigate } from "react-router-dom";
-const Api_URL = import.meta.env.VITE_BASE_URL;
 
 const BirdContestList = () => {
   const [contests, setContests] = useState([]);
@@ -14,7 +13,7 @@ const BirdContestList = () => {
   useEffect(() => {
     const fetchContests = async () => {
       try {
-        const response = await axios.get(`${Api_URL}/flappy/contests`);
+        const response = await axios.get(`https://foodenergy.shop/flappy/contests`);
         setContests(response.data.contests);
       } catch (error) {
         console.error("Error fetching contests:", error);

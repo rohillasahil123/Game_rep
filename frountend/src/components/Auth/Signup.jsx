@@ -6,7 +6,6 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 
-const Api_URL = "https://foodenergy.shop"
 
 const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -36,7 +35,7 @@ const Signup = () => {
     try {
       const { fullName, phone, email, password } = form;
 
-      const response = await axios.post(`${Api_URL}/v1/signup`, {
+      const response = await axios.post(`https://foodenergy.shop/v1/signup`, {
         fullName,
         phone,
         email,
