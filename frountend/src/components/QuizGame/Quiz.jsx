@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import useContestStore from "../../Store/useContestStore";
+const Api_URL = "https//foodenergy.shop"
 
 
 
