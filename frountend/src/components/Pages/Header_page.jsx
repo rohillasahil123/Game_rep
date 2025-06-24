@@ -19,7 +19,6 @@ useEffect(() => {
         },
       });
       setWalletBalance(response.data.balance);
-      console.log(walletBalance , "free")
     } catch (error) {
       console.error("Failed to fetch wallet balance:", error);
       setWalletBalance(null);
@@ -27,7 +26,7 @@ useEffect(() => {
   };
 
   fetchWalletBalance();
-}, []);
+}, [walletBalance]);
 
 
   const navLinks = [

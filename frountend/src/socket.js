@@ -4,7 +4,7 @@ let socket = null;
 
 // ✅ Initialize Socket
 export const initializeSocket = (token) => {
-const socket = io("https://foodenergy.shop", {
+ socket = io("https://foodenergy.shop", {
   transports: ["websocket"],
   auth: { token },
   withCredentials: true,
