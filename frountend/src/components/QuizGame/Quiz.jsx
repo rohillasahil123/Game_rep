@@ -27,12 +27,14 @@ const Quiz = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
-      const res = await axios.post(`https//foodenergy.shop/v1/question`, {}, {
+      const res = await axios.post(`https//foodenergy.shop/v1/question`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+      console.log("try")
       if (res.data?.question) {
         setQuestions((prev) => [...prev, res.data.question]);
       }
+      console.log(questions , "question")
     } catch (err) {
       console.error("❌ Error fetching question:", err);
     } finally {
