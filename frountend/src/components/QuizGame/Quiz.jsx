@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import useContestStore from "../../Store/useContestStore";
+import api from "../../Apiconfig";
 
 
 
@@ -27,7 +28,7 @@ const Quiz = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
-      const res = await axios.post(`https//foodenergy.shop/v1/question`, {
+      const res = await api.post("/question", {}, {
         headers: { Authorization: `Bearer ${token}` },
       });
       console.log("try")
