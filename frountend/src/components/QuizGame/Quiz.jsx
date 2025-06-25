@@ -46,7 +46,7 @@ const Quiz = () => {
   const submitAnswer = async (questionId, selectedAnswer) => {
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.post(`${Api_URL}/v1/submit-answer`, {
+      const res = await api.post(`/submit-answer`, {
         questionId,
         contestId,
         selectedAnswer
