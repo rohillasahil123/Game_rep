@@ -2,34 +2,42 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { FaCrown, FaCoins } from "react-icons/fa";
 import useContestStore from "../../Store/useContestStore";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
-
-
 
 const QuizContestList = () => {
   const [contests, setContests] = useState([]);
   const [joiningContestId, setJoiningContestId] = useState(null);
 
-  const { joinContest, loading, joinResult, error } = useContestStore();
+  const { joinContest, loading } = useContestStore();
   const navigate = useNavigate();
+  const location = useLocation(); // ✅ fix here
 
-  // ✅ Fetch contests on load
   useEffect(() => {
     const fetchContests = async () => {
       try {
-        const response = await axios.get("https://foodenergy.shop/v1/get-contests");
+        let url = "";
+
+        // ✅ Use only your available APIs
+        if (location.pathname === "/quiz") {
+          url = "https://foodenergy.shop/v1/get-contests";
+        } else if (location.pathname === "/flippy") {
+          url = "https://foodenergy.shop/v1/flippy/get-contests";
+        } else {
+          url = "https://foodenergy.shop/v1/get-contests";
+        }
+
+        const response = await axios.get(url);
         setContests(response.data.contests);
       } catch (error) {
-        console.log(error)
         console.error("Error fetching contests:", error);
         toast.error("Failed to fetch contests");
       }
     };
-    fetchContests();
-  }, []);
 
-  // ✅ Join contest handler
+    fetchContests();
+  }, [location.pathname]);
+
   const HandleJoinContest = async (contestId) => {
     try {
       const token = localStorage.getItem("token");
@@ -51,7 +59,7 @@ const QuizContestList = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#eef2ff] to-[#f9fafb] flex flex-col items-center py-12 px-4">
       <h1 className="text-4xl font-extrabold text-blue-900 mb-12 text-center tracking-tight">
-        🎯 Select Your Contest & Double Your Money
+        🎯 Select Your Contest & Earn Money
       </h1>
 
       <div className="w-full max-w-6xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

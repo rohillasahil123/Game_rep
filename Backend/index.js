@@ -617,14 +617,18 @@ const contests = [
 
 
 // ✅ Get All Flappy Contests
-app.get("/v1/flappy/contests", async (req, res) => {
+app.get("/v1/flippy/get-contests", async (req, res) => {
   try {
-    const contests = await FlappyContest.find({}, { roomId: 1, entryFee: 1, prize: 1 }).sort({ entryFee: 1 });
-    res.json({ success: true, contests });
+    const contests = await Contest.find({
+      isCompleted: false,
+      $expr: { $lt: [{ $size: "$players" }, 2] }
+    });
+    res.json({ contests });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ error: err.message });
   }
 });
+
 
 // routes/flappyRoutes.js
 app.post("/flappy/join", async (req, res) => {
