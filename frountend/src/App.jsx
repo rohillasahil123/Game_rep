@@ -1,55 +1,65 @@
-import { useEffect } from 'react'
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
-import Signup from './components/Auth/Signup'
-import Login from './components/Auth/Login'
-import Home_page from './components/Home/Home_Page'
-import Header_Page from './components/Pages/Header_page'
-import CricketDashboard from './components/Sports/CricketDashboard'
-import Quiz from './components/QuizGame/Quiz'
-import QuizSelection from './components/QuizGame/QuizCategories'
-import QuizContestJoinBanner from './components/QuizGame/QuizContestJoinBanner'
-import QuizContestList from './components/QuizGame/QuizContestList'
-import GameResultBanner from './components/QuizGame/GameResultBanner'
-import QuizLeaderboard from './components/QuizGame/QuizLeaderboard'
-import { initializeSocket } from "./socket"
-import FlappyPlay from './components/Flip_Birds/FlappyPlay'
-import BirdContestList from './components/Flip_Birds/BirdContestList'
-import PrivateRoute from './components/Private/PrivateRoute'
-import { Toaster } from 'react-hot-toast'
-import Demo from './components/QuizGame/Demo'
+// App.jsx
+import { useEffect } from "react";
+import { Routes, Route } from "react-router-dom"; 
+import { Toaster } from "react-hot-toast";
+
+// Auth
+import Signup from "./components/Auth/Signup";
+import Login from "./components/Auth/Login";
+
+// Pages
+import Home_page from "./components/Home/Home_Page";
+import Header_Page from "./components/Pages/Header_page";
+
+// Games - Quiz
+import QuizRoutes from "./games/quiz/QuizRoutes";
+import QuizLeaderboard from "./components/QuizGame/QuizLeaderboard";
+import GameResultBanner from "./games/quiz/Components/ResultBanner";
+
+// Games - Flappy
+import FlappyPlay from "./components/Flip_Birds/FlappyPlay";
+import BirdContestList from "./components/Flip_Birds/BirdContestList";
+
+import CricketDashboard from "./components/Sports/CricketDashboard";
+
+// Private Route
+import PrivateRoute from "./components/Private/PrivateRoute";
+
+// Socket
+import { initializeSocket } from "./socket";
+
+// Demo
+import Demo from "./components/QuizGame/Demo";
 
 const App = () => {
   useEffect(() => {
     const socket = initializeSocket();
-    console.log("Socket initialized")
+    console.log("Socket initialized");
   }, []);
 
   return (
-    <>
+    <div className="flex flex-col min-h-screen">
       <Header_Page />
-        <Toaster/>
-      <Routes>
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/" element={<Home_page />} />
-        <Route  path='/demo' element={<Demo/>} ></Route>
+      <Toaster />
 
-        {/* ✅ Protected Routes */}
-        <Route path="/cricket" element={<PrivateRoute><CricketDashboard /></PrivateRoute>} />
-        
-        <Route path="/quiz" element={<PrivateRoute><QuizSelection /></PrivateRoute>} />
-        <Route path="/quiz/question" element={<PrivateRoute><Quiz /></PrivateRoute>} />
-        <Route path="/quiz/banner" element={<PrivateRoute><QuizContestJoinBanner /></PrivateRoute>} />
-        <Route path="/quiz/list" element={<PrivateRoute><QuizContestList /></PrivateRoute>} />
-        <Route path="/quiz/join/win" element={<PrivateRoute><GameResultBanner /></PrivateRoute>} />
-        <Route path="/quiz/leaderboard" element={<PrivateRoute><QuizLeaderboard /></PrivateRoute>} />
-        
-        <Route path="/bird" element={<PrivateRoute><FlappyPlay /></PrivateRoute>} />
-        <Route path="/bird/list" element={<PrivateRoute><BirdContestList /></PrivateRoute>} />
-      
-      </Routes>
-    </>
-  )
-}
+      <main className="flex-grow">
+        <Routes>
+          <Route path="/" element={<Home_page />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/demo" element={<Demo />} />
 
-export default App
+          {/* ✅ Protected Routes */}
+          <Route path="/cricket" element={<PrivateRoute><CricketDashboard /></PrivateRoute>} />
+          <Route path="/quiz/*" element={<PrivateRoute><QuizRoutes /></PrivateRoute>} />
+          <Route path="/quiz/leaderboard" element={<PrivateRoute><QuizLeaderboard /></PrivateRoute>} />
+          <Route path="/quiz/join/win" element={<PrivateRoute><GameResultBanner /></PrivateRoute>} />
+          <Route path="/bird" element={<PrivateRoute><FlappyPlay /></PrivateRoute>} />
+          <Route path="/bird/list" element={<PrivateRoute><BirdContestList /></PrivateRoute>} />
+        </Routes>
+      </main>
+    </div>
+  );
+};
+
+export default App;

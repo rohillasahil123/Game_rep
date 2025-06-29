@@ -1,7 +1,6 @@
-// components/Common/JoinBanner.jsx
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getSocket, joinQuizRoom, onPlayerJoined } from "../../socket";
+import { getSocket, joinQuizRoom, onPlayerJoined } from "../../../socket";
 
 const JoinBanner = ({ contestId, fullName, userId, redirectTo }) => {
   const [players, setPlayers] = useState([]);
