@@ -6,8 +6,8 @@ import QuizPage from "./pages/QuizPage";
 const QuizRoutes = () => {
   return (
     <Routes>
-      <Route path="/quiz" element={<QuizSelection />} />
-      <Route path="/quiz/play" element={<QuizPage />} />
+      <Route path="/" element={<QuizSelection />} />  {/* means /quiz */}
+      <Route path="play" element={<QuizPage />} />     {/* means /quiz/play */}
     </Routes>
   );
 };
